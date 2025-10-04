@@ -1,0 +1,61 @@
+from django.contrib import admin
+from .models import Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog
+
+# @admin.register(Company)
+# class CompanyAdmin(admin.ModelAdmin):
+#     list_display = ("business_name", "business_type", "language", "booking_enabled")
+#     search_fields = ("business_name", "api_key")
+
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ("company", "name", "price", "duration_minutes", "is_active")
+    list_filter = ("company", "is_active")
+
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ("company", "name", "phone", "email")
+    list_filter = ("company",)
+    search_fields = ("name", "phone", "email")
+
+@admin.register(Booking)
+class BookingAdmin(admin.ModelAdmin):
+    list_display = ("company", "service", "customer", "status", "date")
+    list_filter = ("company", "status")
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = ("company", "session_id", "status", "updated_at")
+    list_filter = ("company", "status")
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ("conversation", "content", "role", "created_at")
+    list_filter = ("conversation", "role")
+
+@admin.register(EscalationTicket)
+class EscalationTicketAdmin(admin.ModelAdmin):
+    list_display = ("company", "conversation", "priority", "status", "created_at")
+    list_filter = ("company", "priority", "status")
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ("company", "actor", "action", "created_at")
+    list_filter = ("company", "actor")
+
+
+@admin.register(FAQ)
+class FAQAdmin(admin.ModelAdmin):
+    list_display = ("company", "category", "question")
+    list_filter = ("company", "category")
+    search_fields = ("question", "answer")
+
+
+class FAQInline(admin.TabularInline):
+    model = FAQ
+    extra = 1
+
+@admin.register(Company)
+class CompanyAdmin(admin.ModelAdmin):
+    # inlines = [FAQInline]
+    list_display = ("business_name", "business_type", "language", "booking_enabled")
+    search_fields = ("business_name", "api_key")
