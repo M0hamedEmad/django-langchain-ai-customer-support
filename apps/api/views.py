@@ -104,7 +104,9 @@ class ChatStreamView(APIView):
             Message.objects.create(
                 conversation=conv,
                 role=Message.Role.ASSISTANT,
-                            )
+                content=final_text,
+                meta={"lang": "ar"},
+            )
 
         except Exception as e:
             print(e)

@@ -22,7 +22,7 @@ INSTALLED_APPS = [
 
     # Third-party
     "rest_framework",
-    # "channels",
+    
 
     # Local apps
     "apps.core",
@@ -66,8 +66,13 @@ DATABASES: Dict[str, Dict[str, Any]] = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+
+        'timeout': 20,
+        'check_same_thread': False,  # For concurrent requests
     }
 }
+
+CONN_MAX_AGE = 600 
 
 LANGUAGE_CODE = "en"
 TIME_ZONE = os.environ.get("TIME_ZONE", "UTC")

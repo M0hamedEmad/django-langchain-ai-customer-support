@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog
+from .models import Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog, JSONFAQ
 
 # @admin.register(Company)
 # class CompanyAdmin(admin.ModelAdmin):
@@ -59,3 +59,11 @@ class CompanyAdmin(admin.ModelAdmin):
     # inlines = [FAQInline]
     list_display = ("business_name", "business_type", "language", "booking_enabled")
     search_fields = ("business_name", "api_key")
+
+
+
+@admin.register(JSONFAQ)
+class JSONFAQAdmin(admin.ModelAdmin):
+    list_display = ("company", "name", "data")
+
+        

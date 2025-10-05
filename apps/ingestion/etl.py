@@ -7,23 +7,23 @@ from langchain_core.documents import Document
 from apps.ai.retrieval.chroma_store import get_vectorstore, collection_name
 from apps.ai.retrieval.arabic_preprocess import normalize_arabic
 
-
+from apps.core.models import Company
 
 def handle_faq_questions(data, company_id):
     docs: List[Document] = []
     ids: List[str] = []
     if isinstance(data, list):
         for i, item in enumerate(data):
-            q = (item.question or "").strip()
-            a = (item.answer or "").strip()
-            informal_answer = (item.informal_answer or "").strip()
+            q = (item.get("question") or "").strip()
+            a = (item.get("answer") or "").strip()
+            informal_answer = (item.get("informal_answer") or "").strip()
             
             content = f"سؤال: {q}\nإجابة: {a}"
             if informal_answer:
                 content += f"\nإجابة اخري: {informal_answer}"
             
-            docs.append(Document(page_content=content, metadata={"source": "faq", "company_id": str(company_id), "faq_id": str(item.id), "category": item.category or "", "tags": item.tags or "", "example_dialogue": item.example_dialogue or "", "rag_tips": item.rag_tips or "", "row": i}))
-            ids.append(f"faq:{item.id}")
+            docs.append(Document(page_content=content, metadata={"question": q, "answer": a, "source": "faq", "company_id": str(company_id), "faq_id": str(item.get("id", "")), "category": item.get("category", ""), "tags": item.get("tags", ""), "example_dialogue": item.get("example_dialogue", ""), "rag_tips": item.get("rag_tips", ""), "row": i, "json_faq_id": str(item.get("json_faq_id", ""))}))
+            ids.append(f"faq:{item.get("id", "")}")
     return docs, ids
 
 
@@ -44,17 +44,36 @@ def upsert_faqs(company, faq_records):
 
         if ids:
             try:
-                vs.delete(ids=ids)
+                vs.delete(where={"$and": [
+                {"company_id": str(company.id)},
+                {"faq_id": {"$in": ids}}
+                ]})
             except Exception as e:
                 print(e)
 
         vs = get_vectorstore(company)
         vs.add_documents(chunks)
-
+        print(f"Upserted {len(ids)} FAQs for company {company.id}")
         return {"upserted": len(ids), "collection": collection_name(company)}
     except Exception as e:
         print(e)
         raise e
+
+
+def delete_faq_id(company, faq_id):
+    """Upsert FAQs into Chroma collection for the company, replacing existing vectors for those IDs."""
+    try:
+        vs = get_vectorstore(company)
+        d = vs.delete(where={"$and": [
+                {"company_id": str(company.id)},
+                {"faq_id": {"$in": faq_id}}
+                ]})
+        print(f"Deleted {len(faq_id)} FAQs for company {company.id} - {d}")
+        return {"deleted": len(faq_id), "collection": collection_name(company)}
+    except Exception as e:
+        print(e)
+        raise e
+
 
 
 def upsert_company_info(company_id):
@@ -79,7 +98,11 @@ def upsert_company_info(company_id):
 
         vs = get_vectorstore(company)
         
-        vs.delete(where={'company_info_id': str(company_id)})
+        vs.delete(where={"$and": [
+                {"company_info_id": str(company_id)},
+                {"source": "company_info"}
+                ]}
+                )
 
         vs.add_documents(chunks)
 

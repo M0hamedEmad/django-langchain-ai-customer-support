@@ -8,3 +8,4 @@ urlpatterns = [
     path("knowledge/faq/reindex", views.FAQReindexAllView.as_view(), name="faq-reindex"),
     path("conversations/<str:session_id>/messages/", views.ConversationMessagesView.as_view(), name="conversation-messages")
 ]
+

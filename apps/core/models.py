@@ -97,6 +97,24 @@ class FAQ(models.Model):
         return f"FAQ[{self.company.business_name}] {self.category or ''}"
 
 
+    # def save(self, *args, **kwargs):
+    #     from apps.ingestion.etl import upsert_faqs
+    #     super().save(*args, **kwargs)
+    #     data = [
+    #         {
+    #             "id": self.id,
+    #             "question": self.question,
+    #             "answer": self.answer,
+    #             "informal_answer": self.informal_answer,
+    #             "category": self.category,
+    #             "tags": self.tags,
+    #             "example_dialogue": self.example_dialogue,
+    #             "rag_tips": self.rag_tips
+    #         }
+    #     ]
+    #     upsert_faqs(self.company, data)        
+
+
 class Customer(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="customers")
     external_id = models.CharField(max_length=255, blank=True)
@@ -174,7 +192,7 @@ class Message(models.Model):
         ASSISTANT = "assistant", "assistant"
         SYSTEM = "system", "system"
 
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages", db_index=True)
     role = models.CharField(max_length=16, choices=Role.choices)
     content = models.TextField()
     meta = models.JSONField(default=dict, blank=True)
@@ -183,7 +201,6 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("conversation", "dedup_hash")
         ordering = ("created_at", "pk")
 
     def __str__(self) -> str:
@@ -231,3 +248,47 @@ class AuditLog(models.Model):
 
     def __str__(self) -> str:
         return f"Audit {self.actor} {self.action}"
+
+
+
+
+class JSONFAQ(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="json_fq")
+    name = models.CharField(max_length=100, blank=True, null=True)  # optional label
+    data = models.JSONField()
+
+    def __str__(self):
+        return self.name or f"JSON #{self.pk}"
+
+
+
+    def save(self, *args, **kwargs):
+        from apps.ingestion.etl import upsert_faqs, delete_faq_id
+
+        if not self.id:
+            super().save(*args, **kwargs)
+        else:
+            delete_faq_id(self.company, [self.id])
+
+        
+        docs = []
+        for obj in self.data:
+            docs.append({
+                "question": obj.get("question"),
+                "answer": obj.get("answer"),
+                "category": obj.get("category", ""),
+                "example_dialogue": obj.get("example_dialogue", ""),
+                "rag_tips": obj.get("rag_tips", ""),
+                "company_id": str(self.company.id),
+                "json_faq_id": str(self.id),
+            })
+        
+        upsert_faqs(self.company, docs)
+        
+        super().save(*args, **kwargs)
+        
+    def delete(self, *args, **kwargs):
+        from apps.ingestion.etl import delete_faq_id
+        delete_faq_id(self.company, [self.id])
+        super().delete(*args, **kwargs)
+        
