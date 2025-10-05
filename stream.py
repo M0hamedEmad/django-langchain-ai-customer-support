@@ -44,6 +44,9 @@ if 'session_number' not in st.session_state:
 if 'session_id' not in st.session_state:
     # Generate unique session ID based on timestamp
     st.session_state.session_id = f"sess-1"
+if 'company_api_key' not in st.session_state:
+    st.session_state.company_api_key = "gym_2"
+    
 
 # Function to save data to browser storage simulation
 def save_to_storage():
@@ -64,7 +67,7 @@ def send_chat_message(message, phone_number):
     """Send message to the API and get response"""
     url = "http://localhost:8000/api/v1/chat/stream"
     headers = {
-        "X-Company-Key": "gym_2",
+        "X-Company-Key": st.session_state.company_api_key or "gym_2",
         "Content-Type": "application/json"
     }
     data = {
@@ -88,7 +91,7 @@ def load_conversation_messages(session_id, phone_number):
     """Load previous conversation messages from API"""
     url = f"http://localhost:8000/api/v1/conversations/{session_id}/messages"
     headers = {
-        "X-Company-Key": "gym_2",
+        "X-Company-Key": st.session_state.company_api_key or "gym_2",
         "Content-Type": "application/json"
     }
     params = {
@@ -125,6 +128,9 @@ if load_from_storage() and st.session_state.phone_number:
         )
         if old_messages:
             st.session_state.messages = old_messages
+        else:
+            st.session_state.messages = []
+            
 
 # Sidebar
 with st.sidebar:
@@ -139,19 +145,27 @@ with st.sidebar:
         key="phone_input"
     )
     
+    company_api_key = st.text_input(
+        "company_api  *",
+        value="gym_2",
+        max_chars=20,
+        key="company_input",
+    )
+    
     # Login button
     if st.button("تسجيل الدخول", use_container_width=True):
-        if phone and len(phone) >= 10:
+        if phone and len(phone) >= 5:
             st.session_state.logged_in = True
             st.session_state.phone_number = phone
+            
+            st.session_state.company_api_key = company_api_key
             
             # Load old messages after login
             old_messages = load_conversation_messages(
                 st.session_state.session_id, 
                 phone
             )
-            if old_messages:
-                st.session_state.messages = old_messages
+            st.session_state.messages = old_messages or []
             
             save_to_storage()
             st.success("تم تسجيل الدخول بنجاح!")
