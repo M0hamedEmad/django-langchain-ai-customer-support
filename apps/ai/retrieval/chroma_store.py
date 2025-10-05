@@ -15,9 +15,9 @@ def collection_name(company: Company) -> str:
     return f"company_{company.id}"
 
 
+
 def get_embeddings() -> Any:
     provider = (getattr(settings, "LLM_PROVIDER", os.getenv("LLM_PROVIDER", "openai")) or "openai").lower()
-    print(provider)
 
     if provider in ("gemini", "google", "google-genai") and GoogleGenerativeAIEmbeddings is not None:
         # Prefer configurable embeddings model; default to text-embedding-004

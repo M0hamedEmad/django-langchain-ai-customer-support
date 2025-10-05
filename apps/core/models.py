@@ -178,7 +178,7 @@ class Message(models.Model):
     role = models.CharField(max_length=16, choices=Role.choices)
     content = models.TextField()
     meta = models.JSONField(default=dict, blank=True)
-    dedup_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    dedup_hash = models.CharField(max_length=64, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

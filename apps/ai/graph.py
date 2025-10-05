@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from .state import GraphState
-from .workflow import compile_workflow
+# from .workflow import compile_workflow
 
 
 def run_chat(*, state: Dict[str, Any], company, conversation) -> Dict[str, Any]:
@@ -14,7 +14,7 @@ def run_chat(*, state: Dict[str, Any], company, conversation) -> Dict[str, Any]:
     """
     try:
         s: GraphState = state  # type: ignore
-        app = compile_workflow(company=company, conversation=conversation)
+        # app = compile_workflow(company=company, conversation=conversation)
         final_state = app.invoke(s)
         return final_state  # includes answer/debug/intent/booking
     except Exception as e:  # safety net

@@ -1,31 +1,11 @@
 from __future__ import annotations
-from typing import Iterable, List, Dict, Any
-
-from django.conf import settings
-import os
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
-try:
-    from langchain_community.vectorstores import Chroma
-except Exception:  # pragma: no cover
-    Chroma = None  # type: ignore
 
-try:
-    from langchain_openai import OpenAIEmbeddings  # type: ignore
-except Exception:  # pragma: no cover
-    OpenAIEmbeddings = None  # type: ignore
-
-try:
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings  # type: ignore
-except Exception:  # pragma: no cover
-    GoogleGenerativeAIEmbeddings = None  # type: ignore
-
-
-from apps.core.models import Company, FAQ
-from apps.ai.retrieval.arabic_preprocess import normalize_arabic
 from apps.ai.retrieval.chroma_store import get_vectorstore, collection_name
+from apps.ai.retrieval.arabic_preprocess import normalize_arabic
 
 
 

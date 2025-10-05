@@ -1,50 +1,28 @@
 import logging
 import re
-from typing import TypedDict, List, Optional, Dict, Any
+from typing import Optional
 
 from langgraph.graph import StateGraph, END
 
-import os
 import json
-import logging
-from datetime import datetime, timedelta
-from typing import TypedDict, List, Optional, Dict, Any
-from enum import Enum
+from datetime import datetime
 
 # LangChain imports
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.schema import HumanMessage, AIMessage, SystemMessage
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema import HumanMessage
 
-# LangGraph imports
-from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.memory import MemorySaver
 
 
-import os
-
-
-from langchain_community.vectorstores import Chroma
-from langchain_openai import OpenAIEmbeddings
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
-
-from .state import GraphState, ConversationState, IntentType, IntentSubType
-from . import nodes
+from .state import ConversationState, IntentType, IntentSubType
 
 from .llm_providers import get_chat_model
 
 from apps.ai.retrieval.arabic_preprocess import normalize_arabic
 from apps.ai.retrieval.chroma_store import get_vectorstore
-from apps.core.models import Company, Service, Customer, Booking
+from apps.core.models import Service, Customer, Booking
 
-from langgraph.prebuilt import ToolNode
 from langchain_core.tools import tool
-from datetime import datetime
 
 
 logging.basicConfig(level=logging.INFO)
@@ -83,45 +61,6 @@ class CustomerServiceChatbot:
 
 
     def setup_data(self):
-        """إعداد قواعد البيانات الوهمية للعملاء والحجوزات"""
-        self.customers_db = {
-            "12345": {
-                "name": "أحمد محمد",
-                "phone": "01234567890",
-                "email": "ahmed@example.com",
-                "membership_type": "ذهبية",
-                "membership_end": "2024-12-31",
-                "active_bookings": ["BK001", "BK002"]
-            },
-            "67890": {
-                "name": "فاطمة علي",
-                "phone": "09876543210",
-                "email": "fatma@example.com",
-                "membership_type": "فضية",
-                "membership_end": "2024-10-15",
-                "active_bookings": ["BK003"]
-            }
-        }
-        
-        self.bookings_db = {
-            "BK001": {
-                "customer_id": "12345",
-                "service": "تدريب شخصي",
-                "date": "2024-09-30",
-                "time": "18:00",
-                "trainer": "مدرب أحمد",
-                "status": "مؤكد"
-            },
-            "BK002": {
-                "customer_id": "12345",
-                "service": "جلسة تدليك",
-                "date": "2024-10-02",
-                "time": "16:00",
-                "therapist": "أخصائي سارة",
-                "status": "مؤكد"
-            }
-        }
-        
         self.services_db = Service.objects.filter(company=self.company, is_active=True)
 
         self.services_info = "\n".join([
@@ -390,8 +329,6 @@ class CustomerServiceChatbot:
         additional_info = f"الخطوة الحالية: {state.get('current_step', 'غير محدد')}"
         info = self.company.get_company_general_info()
         
-        print("context")
-        print(context)
         try:            
             prompt = self.response_generator_template.format_messages(
                 chat_history=state["conversation_history"],
@@ -462,9 +399,7 @@ class CustomerServiceChatbot:
             response = self.llm.invoke(prompt)
             response_text = response.content.strip()
             
-            # محاولة تحليل JSON
             try:
-                # إزالة أي نص قبل أو بعد JSON
                 json_start = response_text.find('{')
                 json_end = response_text.rfind('}') + 1
                 if json_start != -1 and json_end > json_start:
@@ -476,7 +411,6 @@ class CustomerServiceChatbot:
                     customer = intent_data.get("customer", {})
                     confidence = float(intent_data.get("confidence", 0.5))
                     
-                    # التحقق من صحة النية
                     valid_intents = [e.value for e in IntentType]
                     valid_intent_types = [e.value for e in IntentSubType]
                     
@@ -899,7 +833,7 @@ class CustomerServiceChatbot:
              """
 
         if not edit_fields and action_type == "edit":
-            rag_context += f"""
+            rag_context += """
                 تحديد الحقل المحدد:
                الحقول التي تريد تعديلها
 
@@ -981,9 +915,6 @@ class CustomerServiceChatbot:
         try:
             json_start = response.content.find('{')
             json_end = response.content.rfind('}') + 1
-            print('****')
-            print(response.content)
-            print(json_start != -1 and json_end > json_start)
             if json_start != -1 and json_end > json_start:
                 json_text = response.content[json_start:json_end]
                 analysis = json.loads(json_text)
@@ -998,7 +929,7 @@ class CustomerServiceChatbot:
                     state["edit_fields"] = analysis["edit_fields"]
             else:
                 state["rag_context"] = ""
-        except Exception as e:
+        except Exception:
             import traceback
             print(traceback.format_exc())
         
@@ -1291,7 +1222,7 @@ class CustomerServiceChatbot:
                     return Service.objects.filter(id=service).first()
                 
                 return None
-        except Exception as e:
+        except Exception:
             import traceback
 
             logger.error(f"Error parsing JSON response in service booking: {traceback.format_exc()}")
@@ -1314,18 +1245,10 @@ class CustomerServiceChatbot:
                 "current_step": "start",
                 "requires_escalation": False
             }
-            
-            print(init_state)
             result = self.app.invoke(init_state or current_state, config)
             return result
             
-            # إرجاع آخر رد من المساعد
-            assistant_messages = [msg for msg in result.get("messages", []) if msg["role"] == "assistant"]
-            
-            if assistant_messages:
-                return assistant_messages[-1]["content"]
-            else:
-                return "عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى."
+      
                 
         except Exception as e:
             import traceback
@@ -1338,101 +1261,101 @@ class CustomerServiceChatbot:
 
 
 
-def compile_workflow(*, company, conversation):
-    """
-    Build a LangGraph StateGraph using the node functions.
-    Some nodes require company/conversation context, supplied via closures.
-    """
-    g = StateGraph(GraphState)
+# def compile_workflow(*, company, conversation):
+#     """
+#     Build a LangGraph StateGraph using the node functions.
+#     Some nodes require company/conversation context, supplied via closures.
+#     """
+#     g = StateGraph(GraphState)
 
-    # Wrappers to inject company/conversation
-    def _retrieve(state: Dict[str, Any]) -> Dict[str, Any]:
-        return nodes.retrieve(state, company=company)
+#     # Wrappers to inject company/conversation
+#     def _retrieve(state: Dict[str, Any]) -> Dict[str, Any]:
+#         return nodes.retrieve(state, company=company)
 
-    def _booking_params(state: Dict[str, Any]) -> Dict[str, Any]:
-        return nodes.booking_params(state, company=company)
+#     def _booking_params(state: Dict[str, Any]) -> Dict[str, Any]:
+#         return nodes.booking_params(state, company=company)
 
-    def _booking_execute(state: Dict[str, Any]) -> Dict[str, Any]:
-        return nodes.booking_execute(state, company=company, conversation=conversation)
+#     def _booking_execute(state: Dict[str, Any]) -> Dict[str, Any]:
+#         return nodes.booking_execute(state, company=company, conversation=conversation)
 
-    def _escalate(state: Dict[str, Any]) -> Dict[str, Any]:
-        return nodes.escalate(state, company=company, conversation=conversation)
+#     def _escalate(state: Dict[str, Any]) -> Dict[str, Any]:
+#         return nodes.escalate(state, company=company, conversation=conversation)
 
-    # Add nodes
-    g.add_node("preprocess_ar", nodes.preprocess_ar)
-    g.add_node("customer_identifier", nodes.customer_identifier)
-    g.add_node("classify_intent", nodes.classify_intent)
-    g.add_node("retrieve", _retrieve)
-    g.add_node("generate_answer", nodes.generate_answer)
-    g.add_node("booking", nodes.booking)
-    g.add_node("booking_params", _booking_params)
-    g.add_node("booking_confirmation_handler", nodes.booking_confirmation_handler)
-    g.add_node("booking_execute", _booking_execute)
-    g.add_node("escalate", _escalate)
-    g.add_node("error_handler", nodes.error_handler)
+#     # Add nodes
+#     g.add_node("preprocess_ar", nodes.preprocess_ar)
+#     g.add_node("customer_identifier", nodes.customer_identifier)
+#     g.add_node("classify_intent", nodes.classify_intent)
+#     g.add_node("retrieve", _retrieve)
+#     g.add_node("generate_answer", nodes.generate_answer)
+#     g.add_node("booking", nodes.booking)
+#     g.add_node("booking_params", _booking_params)
+#     g.add_node("booking_confirmation_handler", nodes.booking_confirmation_handler)
+#     g.add_node("booking_execute", _booking_execute)
+#     g.add_node("escalate", _escalate)
+#     g.add_node("error_handler", nodes.error_handler)
 
-    # Entry
-    g.set_entry_point("preprocess_ar")
+#     # Entry
+#     g.set_entry_point("preprocess_ar")
 
-    # Linear edges
-    g.add_edge("preprocess_ar", "customer_identifier")
-    g.add_edge("customer_identifier", "classify_intent")
+#     # Linear edges
+#     g.add_edge("preprocess_ar", "customer_identifier")
+#     g.add_edge("customer_identifier", "classify_intent")
 
-    # Conditional routing from classify_intent
-    def route_intent(state: Dict[str, Any]) -> str:
-        label = (state.get("intent") or {}).get("label")
-        return label or "FAQ"
+#     # Conditional routing from classify_intent
+#     def route_intent(state: Dict[str, Any]) -> str:
+#         label = (state.get("intent") or {}).get("label")
+#         return label or "FAQ"
 
-    g.add_conditional_edges(
-        "classify_intent",
-        route_intent,
-        {
-            "FAQ": "retrieve",
-            "SMALL_TALK": "generate_answer",
-            "BOOKING": "booking",
-            "ESCALATE": "escalate",
-        },
-    )
+#     g.add_conditional_edges(
+#         "classify_intent",
+#         route_intent,
+#         {
+#             "FAQ": "retrieve",
+#             "SMALL_TALK": "generate_answer",
+#             "BOOKING": "booking",
+#             "ESCALATE": "escalate",
+#         },
+#     )
 
-    # Retrieval to answer
-    g.add_edge("retrieve", "generate_answer")
+#     # Retrieval to answer
+#     g.add_edge("retrieve", "generate_answer")
 
-    # Booking subgraph
-    g.add_edge("booking", "booking_params")
+#     # Booking subgraph
+#     g.add_edge("booking", "booking_params")
 
-    def route_params(state: Dict[str, Any]) -> str:
-        status = ((state.get("booking") or {}).get("params_status")) or "incomplete"
-        return status
+#     def route_params(state: Dict[str, Any]) -> str:
+#         status = ((state.get("booking") or {}).get("params_status")) or "incomplete"
+#         return status
 
-    g.add_conditional_edges(
-        "booking_params",
-        route_params,
-        {
-            "complete": "booking_confirmation_handler",
-            "incomplete": "generate_answer",
-        },
-    )
+#     g.add_conditional_edges(
+#         "booking_params",
+#         route_params,
+#         {
+#             "complete": "booking_confirmation_handler",
+#             "incomplete": "generate_answer",
+#         },
+#     )
 
-    def route_confirmation(state: Dict[str, Any]) -> str:
-        confirmed = (((state.get("booking") or {}).get("confirmation") or {}).get("confirmed")) or False
-        return "confirmed" if confirmed else "not_confirmed"
+#     def route_confirmation(state: Dict[str, Any]) -> str:
+#         confirmed = (((state.get("booking") or {}).get("confirmation") or {}).get("confirmed")) or False
+#         return "confirmed" if confirmed else "not_confirmed"
 
-    g.add_conditional_edges(
-        "booking_confirmation_handler",
-        route_confirmation,
-        {
-            "confirmed": "booking_execute",
-            "not_confirmed": "generate_answer",
-        },
-    )
+#     g.add_conditional_edges(
+#         "booking_confirmation_handler",
+#         route_confirmation,
+#         {
+#             "confirmed": "booking_execute",
+#             "not_confirmed": "generate_answer",
+#         },
+#     )
 
-    g.add_edge("booking_execute", "generate_answer")
+#     g.add_edge("booking_execute", "generate_answer")
 
-    # Terminal
-    g.add_edge("generate_answer", END)
-    g.add_edge("escalate", END)
+#     # Terminal
+#     g.add_edge("generate_answer", END)
+#     g.add_edge("escalate", END)
 
-    return g.compile()
+#     return g.compile()
 
 
 
@@ -1456,14 +1379,8 @@ def handle_chat(message, session_id, customer_id, company, init_state=None):
         customer_id = "12345"  # اختياري
 
         final_state = chatbot.handle_message(message, session_id, customer_id, init_state=init_state)
-        print(final_state)
         return final_state  # includes answer/debug/intent/booking
     except Exception as e:  # safety net
-        # Minimal fallback without importing nodes here
-        # s = state
-        # s.setdefault("errors", []).append(str(e))
-        # s.setdefault("answer", {})["text"] = "عذرًا، حصل خطأ بسيط. خلّينا نجرب كمان مرة."
-        # s.setdefault("debug", {})["node"] = "error_handler"
         print(e)
         return e
 
