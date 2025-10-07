@@ -17,9 +17,9 @@ def collection_name(company: Company) -> str:
 
 
 def get_embeddings() -> Any:
-    provider = (getattr(settings, "LLM_PROVIDER", os.getenv("LLM_PROVIDER", "openai")) or "openai").lower()
+    provider = (getattr(settings, "LLM_PROVIDER", os.getenv("LLM_PROVIDER", "gemini")) or "gemini").lower()
 
-    if provider in ("gemini", "google", "google-genai") and GoogleGenerativeAIEmbeddings is not None:
+    if provider in ("gemini", "google", "google-genai", "deepseek") and GoogleGenerativeAIEmbeddings is not None:
         # Prefer configurable embeddings model; default to text-embedding-004
         model_name = os.getenv("GOOGLE_EMBEDDINGS_MODEL", "models/gemini-embedding-001")
         if not os.getenv("GOOGLE_API_KEY"):

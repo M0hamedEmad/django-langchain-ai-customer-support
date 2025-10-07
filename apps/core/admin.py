@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog, JSONFAQ
+from .models import Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog, JSONFAQ, WebSiteConfig
 
 # @admin.register(Company)
 # class CompanyAdmin(admin.ModelAdmin):
@@ -60,7 +60,9 @@ class CompanyAdmin(admin.ModelAdmin):
     list_display = ("business_name", "business_type", "language", "booking_enabled")
     search_fields = ("business_name", "api_key")
 
-
+@admin.register(WebSiteConfig)
+class WebConfigAdmin(admin.ModelAdmin):
+    list_display = ("llm_provider", "llm_model", "other", "premium_llm_provider", "premium_llm_model", "premium_other")
 
 @admin.register(JSONFAQ)
 class JSONFAQAdmin(admin.ModelAdmin):

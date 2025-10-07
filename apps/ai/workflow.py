@@ -20,7 +20,7 @@ from .llm_providers import get_chat_model
 
 from apps.ai.retrieval.arabic_preprocess import normalize_arabic
 from apps.ai.retrieval.chroma_store import get_vectorstore
-from apps.core.models import Service, Customer, Booking
+from apps.core.models import Service, Customer, Booking, WebSiteConfig
 
 from langchain_core.tools import tool
 
@@ -37,7 +37,24 @@ class CustomerServiceChatbot:
         
         self.company = company
 
-        self.llm = get_chat_model()
+
+        web_config = WebSiteConfig.objects.filter().first()
+        llm_provider = None
+        llm_model = None
+        p_llm_provider = None
+        p_llm_model = None
+        self.hardness = 5
+                
+        if web_config:
+            llm_provider = web_config.llm_provider
+            llm_model = web_config.get_llm_model()
+            p_llm_provider = web_config.premium_llm_provider
+            p_llm_model = web_config.get_pm_llm_model()
+            self.hardness = web_config.hardness_score
+
+        self.llm = get_chat_model(provider=llm_provider, model_name=llm_model)
+
+        self.pm_llm = get_chat_model(provider=p_llm_provider, model_name=p_llm_model)
 
         self.setup_rag_system()
         
@@ -107,13 +124,15 @@ class CustomerServiceChatbot:
             - تاريخ الحجز
             - رقم الحجز
             
-            
+            بعد ذالك عرف مدي صعوبة السؤال وتعقيده وهل يحتاج تفكير ام لا اذا كان مجرد سؤال بسيط واضح القيمة من 1 ال 10 حيث 10 صعب جدا
+            اذا كان السؤال يحتاج اجابة محترفه او السؤال غير واضح معنه ان صعب اجعل القيمه 5 او اكبر
 
             اجب بصيغة JSON فقط بهذا الشكل:
             {{
                 "intent": "النية_الرئيسية",
                 "intent_type": "النوع_الفرعي",
                 "confidence": 0.95,
+                "hardness": 5,
                 "customer": {{
                     "name": "اسم العميل",
                     "phone": "رقم الهاتف",
@@ -144,10 +163,11 @@ class CustomerServiceChatbot:
                         
             صفاتك الشخصية:
             - حبّاب، وصبور، وتفتهم
-            - محترف بس بطريقة لطيفة ومو رسمية كلش
-            - تستخدم تحيات وعبارات تواصل مناسبة لثقافتنا
-            - تبيّن تعاطفك واهتمامك الصدوقي بالزبائن
-            - تحچي بطريقة طبيعية وسلسة   
+            - محترف بس بطريقة لطيفة وخليك ردودك رسمية بشكل كبير ولكن لطيفة
+            - تستخدم تحيات وعبارات تواصل مناسبة لثقافتنا بدون مبالغه
+            - تبيّن تعاطفك واهتمامك الصدوقي  بدون مبالغه
+            - تحچي بطريقة طبيعية وسلسة
+            - لا يجب ان تكون الاجابة طويلة 
 
             شغلك الأساسي:
             1. تشرح خدماتنا للزبائن
@@ -174,6 +194,7 @@ class CustomerServiceChatbot:
             - خلّي تنسيق الرسالة سهل للقراية ولا تضيّف هواي علامات 
             - بنهاية الرسالة، اسأل الزبون سؤال اختياري إذا أكو شي يأهله ينتقل للمرحلة الجاية بطريقة لطيفة.
             - في حاله العربي دائما تكلم بللهجه العراقي
+            - اذا لم تسطيع تحديد نوع العميل كلمه بصيغه المذكر
 
             معلومات عن الشركة اللي تشتغل بيها:
             {company_info}
@@ -341,7 +362,11 @@ class CustomerServiceChatbot:
                 current_step=state.get("current_step", "غير محدد")
             )
             
-            response = self.llm.invoke(prompt)
+            if self.hardness > 4 or state["intent_confidence"] < 0.7:
+                response = self.pm_llm.invoke(prompt)
+            else:
+                response = self.llm.invoke(prompt)
+
             
             # إضافة الرد إلى المحادثة
             if "messages" not in state:
@@ -410,6 +435,7 @@ class CustomerServiceChatbot:
                     intent_type = intent_data.get("intent_type", "")
                     customer = intent_data.get("customer", {})
                     confidence = float(intent_data.get("confidence", 0.5))
+                    self.hardness = float(intent_data.get("hardness", 5))
                     
                     valid_intents = [e.value for e in IntentType]
                     valid_intent_types = [e.value for e in IntentSubType]
@@ -433,6 +459,8 @@ class CustomerServiceChatbot:
                         state["selected_service"] = customer.get("service") or state.get("selected_service", None)
                         state["booking_date"] = customer.get("booking_date") or state.get("booking_date", None)
                         state["booking_id"] = customer.get("booking_id") or state.get("booking_id", None)
+
+                    
 
                 else:
                     raise ValueError("لم يتم العثور على JSON في الاستجابة")
@@ -458,7 +486,7 @@ class CustomerServiceChatbot:
             state["intent_confidence"] = 0.0
         
         state["current_step"] = "analyze_intent"
-        logger.info(f"تم تحديد النية: {state['current_intent']} | النوع: {state.get('intent_type')} | الثقة: {state.get('intent_confidence', 0):.2f}")
+        logger.info(f"تم تحديد النية: {state['current_intent']} | النوع: {state.get('intent_type')} | الثقة: {state.get('intent_confidence', 0):.2f} | الصعوبة: {self.hardness}")
         return state
 
 

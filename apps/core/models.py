@@ -2,6 +2,65 @@ from __future__ import annotations
 from django.db import models
 from django.utils import timezone
 
+class WebSiteConfig(models.Model):
+    LLM_PROVIDERS = [
+        ("openai", "openai"),
+        ("gemini", "gemini"),
+        ("deepseek", "deepseek"),
+    ]
+    LLM_MODELS = [
+        ("gpt-4o-mini", "gpt-4o-mini"),
+        ("gemini-2.5-flash", "gemini-2.5-flash"),
+        ("gemini-2.5-pro", "gemini-2.5-pro"),
+        ("deepseek/deepseek-chat-v3.1:free", "deepseek"),
+        ("other", "other")
+    ]
+
+    llm_provider = models.CharField(max_length=32, choices=LLM_PROVIDERS, null=True, blank=True)
+    llm_model = models.CharField(max_length=32, null=True, blank=True, choices=LLM_MODELS)
+    other = models.CharField(max_length=255, null=True, blank=True)
+
+    premium_llm_provider = models.CharField(max_length=32, choices=LLM_PROVIDERS, null=True, blank=True)
+    premium_llm_model = models.CharField(max_length=32, null=True, blank=True, choices=LLM_MODELS)
+    premium_other = models.CharField(max_length=255, null=True, blank=True)
+
+    hardness_score = models.IntegerField(default=5)
+
+    class Meta:
+        verbose_name = "LLM Config"
+        verbose_name_plural = "LLM Config"
+
+    def __str__(self):
+        return f"LLM Config {self.llm_provider} {self.llm_model}"
+
+
+    def save(self, *args, **kwargs):
+
+        if not self.pk:
+            if WebSiteConfig.objects.all().exists():
+                raise "you can't add more that 1 web config"
+
+        self.check_proivder(self.llm_provider, self.llm_model)
+        self.check_proivder(self.premium_llm_provider, self.premium_llm_model)
+        
+        super().save(*args, **kwargs)
+
+    def get_llm_model(self):
+        return self.llm_model if self.llm_model != 'other' else self.other
+
+    def get_pm_llm_model(self):
+        return self.premium_llm_model if self.premium_llm_model != 'other' else self.premium_other
+
+    def check_proivder(self, provider, llm):
+        if provider == "gemini" and not llm.startswith("gemini"):
+            raise ValueError("google LLM model must start with 'gemini'")
+        if provider == "openai" and not llm.startswith("gpt"):
+            raise ValueError("openai LLM model must start with 'gpt'")
+        if provider == "deepseek" and not llm.startswith("deepseek"):
+            raise ValueError("deepseek LLM model must start with 'deepseek'")
+
+
+
 
 class Company(models.Model):
     class BusinessType(models.TextChoices):

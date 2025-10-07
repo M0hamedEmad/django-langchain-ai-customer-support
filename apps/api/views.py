@@ -59,16 +59,17 @@ class ChatStreamView(APIView):
         conv, _ = Conversation.objects.get_or_create(
             company=company,
             session_id=session_id,
-            defaults={"customer": customer},
+            customer= customer
         )
-        if customer and not conv.customer:
-            conv.customer = customer
-            conv.save(update_fields=["customer"])  # attach customer lazily
+        # if customer and not conv.customer:
+        #     conv.customer = customer
+        #     conv.save(update_fields=["customer"])  # attach customer lazily
+
 
         # Execute graph to get response
         # Build short conversation history (last 8 messages)
         recent: List[Message] = list(
-            Message.objects.filter(conversation=conv).order_by("-created_at")[:1]
+            Message.objects.filter(conversation=conv).order_by("-created_at")[:8]
         )
         history = [
             {"role": m.role, "content": m.content}
@@ -112,7 +113,7 @@ class ChatStreamView(APIView):
             print(e)
             if msg:
                 msg.delete()
-            final_text = final_text
+            final_text = result
       
         return JsonResponse({"message": final_text})
 
