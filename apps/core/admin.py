@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog, JSONFAQ, WebSiteConfig
+from .models import (
+    Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog, JSONFAQ, WebSiteConfig,
+    WhatsAppMessage
+)
 
 # @admin.register(Company)
 # class CompanyAdmin(admin.ModelAdmin):
@@ -31,6 +34,11 @@ class ConversationAdmin(admin.ModelAdmin):
 class MessageAdmin(admin.ModelAdmin):
     list_display = ("conversation", "content", "role", "created_at")
     list_filter = ("conversation", "role")
+
+@admin.register(WhatsAppMessage)
+class WhatsAppMessageAdmin(admin.ModelAdmin):
+    list_display = ("message_id", "phone_number", "sender_name", "message_body", "timestamp", "received_at", "is_processed")
+    list_filter = ("phone_number", "is_processed")
 
 @admin.register(EscalationTicket)
 class EscalationTicketAdmin(admin.ModelAdmin):

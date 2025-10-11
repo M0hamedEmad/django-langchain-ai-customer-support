@@ -266,6 +266,23 @@ class Message(models.Model):
         return f"Msg {self.role} in Conv {self.conversation_id}"
 
 
+class WhatsAppMessage(models.Model):
+    message_id = models.CharField(max_length=255, unique=True, db_index=True)
+    phone_number = models.CharField(max_length=20)
+    sender_name = models.CharField(max_length=255, blank=True, null=True)
+    message_body = models.TextField()
+    timestamp = models.BigIntegerField()
+    received_at = models.DateTimeField(auto_now_add=True)
+    is_processed = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"{self.phone_number}: {self.message_body[:50]}"
+
+
+
 class EscalationTicket(models.Model):
     class Priority(models.TextChoices):
         LOW = "low", "low"

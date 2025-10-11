@@ -167,7 +167,7 @@ class CustomerServiceChatbot:
             - تستخدم تحيات وعبارات تواصل مناسبة لثقافتنا بدون مبالغه
             - تبيّن تعاطفك واهتمامك الصدوقي  بدون مبالغه
             - تحچي بطريقة طبيعية وسلسة
-            - لا يجب ان تكون الاجابة طويلة 
+            - لا يجب ان تكون الاجابة طويلة اجعلها قصيرة او تميل ال المسوسطة حسب طبيعه الاجابة
 
             شغلك الأساسي:
             1. تشرح خدماتنا للزبائن
@@ -550,6 +550,7 @@ class CustomerServiceChatbot:
             missing.append("phone")
         if not state.get("selected_service"):
             missing.append("service")
+        
 
         state["missing_info"] = missing
 
