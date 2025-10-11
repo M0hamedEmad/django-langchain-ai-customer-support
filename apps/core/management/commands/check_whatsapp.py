@@ -3,6 +3,7 @@ from apps.core.models import WhatsAppMessage, Company, Conversation, Message, Cu
 from apps.api.whatsapp_service import WhatsAppService
 from apps.ai.workflow import handle_chat
 import time
+import threading
 
 class Command(BaseCommand):
     help = 'Check for new WhatsApp messages from specific number'
@@ -134,6 +135,15 @@ class Command(BaseCommand):
         # Mark batch as processed
         WhatsAppMessage.objects.filter(pk__in=[m.pk for m in created_batch]).update(is_processed=True)
 
+    def fire_and_forget(self, phone_number: str, created_batch: list[WhatsAppMessage], whatsapp: WhatsAppService):
+        def send():
+            try:
+                self._process_new_messages(phone_number, created_batch, whatsapp)
+            except Exception:
+                pass  # ignore errors
+        threading.Thread(target=send, daemon=True).start()
+
+
     def handle(self, *args, **options):
         phone_number = options['phone']
         interval = self.interval or options['interval']
@@ -154,13 +164,16 @@ class Command(BaseCommand):
                 
                 if 'data' in response:
                     created_batch: list[WhatsAppMessage] = []
-                    for msg in response['data']:
+                    for index, msg in enumerate(response['data']):
                         
                         msg_id = msg.get('key', {}).get('id', '')
                         sender_name=msg.get('key', {}).get('remoteJid', '')
                         message_body=msg.get('content', {}).get('conversation', '')
                         timestamp=msg.get('messageTimestamp', 0)
                         for_me = msg.get('key', {}).get('fromMe')
+
+                        if index==0 and for_me:
+                            break
                         
                         if not message_body or not sender_name:
                             self.stdout.write(
@@ -201,7 +214,8 @@ class Command(BaseCommand):
 
                     # After saving new messages in this cycle, process them together
                     if created_batch:
-                        self._process_new_messages(phone_number, created_batch, whatsapp)
+                        self.fire_and_forget(phone_number, created_batch, whatsapp)
+                        time.sleep(1)
                 
                 time.sleep(interval)
                 
