@@ -133,7 +133,7 @@ class Service(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    duration_minutes = models.PositiveIntegerField(default=60)
+    duration_minutes = models.PositiveIntegerField("Duration", null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self) -> str:

@@ -14,6 +14,12 @@ class ServiceAdmin(admin.ModelAdmin):
     list_display = ("company", "name", "price", "duration_minutes", "is_active")
     list_filter = ("company", "is_active")
 
+    fieldsets = (
+        (None, {
+            "fields": ("company", "name", "description", "price", "is_active")
+        }),
+    )
+
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ("company", "name", "phone", "email")
@@ -67,6 +73,17 @@ class CompanyAdmin(admin.ModelAdmin):
     # inlines = [FAQInline]
     list_display = ("business_name", "business_type", "language", "booking_enabled")
     search_fields = ("business_name", "api_key")
+
+    fieldsets = (
+        (None, {
+            "fields": (
+                "business_type", "business_name", "api_key", "description", "common_questions", "common_services")
+        }),
+        ("Extra", {
+            "fields": ("company_policies", "company_contact", "language", "booking_enabled")
+        })
+    )
+
 
 @admin.register(WebSiteConfig)
 class WebConfigAdmin(admin.ModelAdmin):
