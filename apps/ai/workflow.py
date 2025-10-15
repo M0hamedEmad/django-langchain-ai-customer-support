@@ -1178,7 +1178,6 @@ class CustomerServiceChatbot:
         self,
         booking_id: int,
         date: Optional[str] = None,
-        new_date: Optional[str] = None,
         notes: Optional[str] = None,
         service: Optional[str] = None,
         state: ConversationState = None,
@@ -1195,7 +1194,7 @@ class CustomerServiceChatbot:
                     id=booking_id, customer=customer
                 )
 
-                if booking.status not in ["pending", "confirmed"]:
+                if booking.status not in [Booking.Status.CREATED, Booking.Status.CONFIRMED]:
                     return {
                         "success": False,
                         "message": f"Cannot edit booking #{booking_id}. Current status: {booking.status}",
@@ -1206,13 +1205,14 @@ class CustomerServiceChatbot:
                 # Update fields if provided
                 if date:
                     try:
-                        booking.date = new_date
-                        changes["date"] = date
-                    except ValueError:
+                        datetime.strptime(date, "%Y-%m-%d")
+                    except (ValueError, TypeError):
                         return {
                             "success": False,
                             "message": "Invalid date format. Use YYYY-MM-DD.",
                         }
+                    booking.date = date
+                    changes["date"] = date
 
                 if notes is not None:
                     booking.notes = notes

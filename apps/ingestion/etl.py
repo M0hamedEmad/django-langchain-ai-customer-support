@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Dict, List
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
@@ -23,7 +25,8 @@ def handle_faq_questions(data, company_id):
                 content += f"\nإجابة اخري: {informal_answer}"
             
             docs.append(Document(page_content=content, metadata={"question": q, "answer": a, "source": "faq", "company_id": str(company_id), "faq_id": str(item.get("id", "")), "category": item.get("category", ""), "tags": item.get("tags", ""), "example_dialogue": item.get("example_dialogue", ""), "rag_tips": item.get("rag_tips", ""), "row": i, "json_faq_id": str(item.get("json_faq_id", ""))}))
-            ids.append(f"faq:{item.get("id", "")}")
+            faq_id = item.get("id", "")
+            ids.append(f"faq:{faq_id}")
     return docs, ids
 
 
@@ -42,6 +45,8 @@ def upsert_faqs(company, faq_records):
         splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=50)
         chunks = splitter.split_documents(raw_docs)
 
+        vs = get_vectorstore(company)
+
         if ids:
             try:
                 vs.delete(where={"$and": [
@@ -51,7 +56,6 @@ def upsert_faqs(company, faq_records):
             except Exception as e:
                 print(e)
 
-        vs = get_vectorstore(company)
         vs.add_documents(chunks)
         print(f"Upserted {len(ids)} FAQs for company {company.id}")
         return {"upserted": len(ids), "collection": collection_name(company)}

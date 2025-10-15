@@ -1,4 +1,5 @@
 from __future__ import annotations
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -17,11 +18,11 @@ class WebSiteConfig(models.Model):
     ]
 
     llm_provider = models.CharField(max_length=32, choices=LLM_PROVIDERS, null=True, blank=True)
-    llm_model = models.CharField(max_length=32, null=True, blank=True, choices=LLM_MODELS)
+    llm_model = models.CharField(max_length=128, null=True, blank=True, choices=LLM_MODELS)
     other = models.CharField(max_length=255, null=True, blank=True)
 
     premium_llm_provider = models.CharField(max_length=32, choices=LLM_PROVIDERS, null=True, blank=True)
-    premium_llm_model = models.CharField(max_length=32, null=True, blank=True, choices=LLM_MODELS)
+    premium_llm_model = models.CharField(max_length=128, null=True, blank=True, choices=LLM_MODELS)
     premium_other = models.CharField(max_length=255, null=True, blank=True)
 
     hardness_score = models.IntegerField(default=5)
@@ -38,10 +39,10 @@ class WebSiteConfig(models.Model):
 
         if not self.pk:
             if WebSiteConfig.objects.all().exists():
-                raise "you can't add more that 1 web config"
+                raise ValidationError("Only one site configuration is allowed.")
 
-        self.check_proivder(self.llm_provider, self.llm_model)
-        self.check_proivder(self.premium_llm_provider, self.premium_llm_model)
+        self.check_provider(self.llm_provider, self.llm_model)
+        self.check_provider(self.premium_llm_provider, self.premium_llm_model)
         
         super().save(*args, **kwargs)
 
@@ -51,7 +52,9 @@ class WebSiteConfig(models.Model):
     def get_pm_llm_model(self):
         return self.premium_llm_model if self.premium_llm_model != 'other' else self.premium_other
 
-    def check_proivder(self, provider, llm):
+    def check_provider(self, provider, llm):
+        if not provider or not llm or llm == "other":
+            return
         if provider == "gemini" and not llm.startswith("gemini"):
             raise ValueError("google LLM model must start with 'gemini'")
         if provider == "openai" and not llm.startswith("gpt"):
