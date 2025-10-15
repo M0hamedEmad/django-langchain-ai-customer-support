@@ -1,6 +1,7 @@
 from __future__ import annotations
 import hashlib
 import json
+import logging
 from typing import Any, Dict, Generator, List
 
 from django.http import  HttpRequest, HttpResponse, JsonResponse
@@ -13,6 +14,9 @@ from apps.core.models import Company, Conversation, Message, Customer, Service, 
 from apps.api.serializers import ServiceSerializer, FAQUpsertItemSerializer
 # from apps.ingestion.etl import upsert_faqs
 from apps.ai.workflow import handle_chat
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_company_from_request(request: HttpRequest) -> Company | None:
@@ -43,27 +47,39 @@ class ChatStreamView(APIView):
         if not message:
             return Response({"detail": "من فضلك أرسل رسالة."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Load or create customer
-        customer = None
-        if any(customer_payload.get(k) for k in ("phone", "email", "name")):
-            customer, _ = Customer.objects.get_or_create(
-                company=company,
-                phone=customer_payload.get("phone", ""),
-                defaults={
-                    "name": customer_payload.get("name", ""),
-                    "email": customer_payload.get("email", ""),
-                },
-            )
+        # Every chat identity is keyed on phone; anonymous messages are rejected
+        # so unrelated users never share one customer row.
+        phone = (customer_payload.get("phone") or "").strip()
+        if not phone:
+            return Response({"detail": "من فضلك أرسل رقم الهاتف."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Load or create conversation
+        customer, created = Customer.objects.get_or_create(
+            company=company,
+            phone=phone,
+            defaults={
+                "name": customer_payload.get("name", ""),
+                "email": customer_payload.get("email", ""),
+            },
+        )
+        if not created:
+            profile_updates = {}
+            if customer_payload.get("name") and customer_payload["name"] != customer.name:
+                profile_updates["name"] = customer_payload["name"]
+            if customer_payload.get("email") and customer_payload["email"] != customer.email:
+                profile_updates["email"] = customer_payload["email"]
+            if profile_updates:
+                Customer.objects.filter(pk=customer.pk).update(**profile_updates)
+                customer.refresh_from_db()
+
+        # One conversation per (company, session_id); the customer is attached
+        # lazily so a session started pre-login keeps its history after login.
         conv, _ = Conversation.objects.get_or_create(
             company=company,
             session_id=session_id,
-            customer= customer
         )
-        # if customer and not conv.customer:
-        #     conv.customer = customer
-        #     conv.save(update_fields=["customer"])  # attach customer lazily
+        if conv.customer_id != customer.id:
+            conv.customer = customer
+            conv.save(update_fields=["customer"])
 
 
         # Execute graph to get response
@@ -76,12 +92,15 @@ class ChatStreamView(APIView):
             for m in reversed(recent)
         ]            
 
-        # Deduplicate incoming user message
-        msg = Message.objects.create(
+        # Idempotent user message: retries of the same payload reuse one row.
+        user_hash = hashlib.sha256(
+            f"{conv.id}:user:{message}".encode("utf-8")
+        ).hexdigest()
+        Message.objects.get_or_create(
             conversation=conv,
             role=Message.Role.USER,
-            content=message,
-            meta={"lang": "ar"},
+            dedup_hash=user_hash,
+            defaults={"content": message, "meta": {"lang": "ar"}},
         )
 
 
@@ -92,30 +111,36 @@ class ChatStreamView(APIView):
             "messages": [{"role": "user", "content": message}],
             "lang": company.language or "ar",
 
-            "customer_id": None if not customer else customer.id,
-            "customer_name": None if not customer else customer.name,
-            "customer_phone": None if not customer else customer.phone,
+            "customer_id": customer.id,
+            "customer_name": customer.name,
+            "customer_phone": customer.phone,
 
             "conversation_history": history,
         }
-        result =  handle_chat(message, session_id, 1, company, init_state=state)
+        result = handle_chat(message, session_id, customer.id, company, init_state=state)
         try:
             final_text: str = result["messages"][-1]["content"]
-
-            Message.objects.create(
-                conversation=conv,
-                role=Message.Role.ASSISTANT,
-                content=final_text,
-                meta={"lang": "ar"},
+        except (KeyError, IndexError, TypeError, AttributeError):
+            logger.exception("Chat pipeline returned no usable reply")
+            return Response(
+                {"detail": "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى لاحقاً."},
+                status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        except Exception as e:
-            print(e)
-            if msg:
-                msg.delete()
-            final_text = result
-      
-        return JsonResponse({"message": final_text})
+        # Idempotent assistant reply: a retried request replays the first answer
+        # instead of appending a duplicate. The user message is intentionally
+        # kept on pipeline failure (no delete-rollback) so history stays truthful.
+        assistant_hash = hashlib.sha256(
+            f"{user_hash}:assistant".encode("utf-8")
+        ).hexdigest()
+        reply, _ = Message.objects.get_or_create(
+            conversation=conv,
+            role=Message.Role.ASSISTANT,
+            dedup_hash=assistant_hash,
+            defaults={"content": final_text, "meta": {"lang": "ar"}},
+        )
+
+        return JsonResponse({"message": reply.content})
 
       
 
@@ -207,12 +232,12 @@ class ConversationMessagesView(APIView):
             "session_id": session_id
         }
 
+        customer = None
         if customer_phone:
             customer = Customer.objects.filter(company=company, phone=customer_phone).first()
-        if not customer:
-            return JsonResponse({"detail": "Customer external id is required", "messages": []})
-        
-        query["customer"] = customer
+            if customer is None:
+                return JsonResponse({"detail": "Customer not found", "messages": []})
+            query["customer"] = customer
 
         try:
             conversation = Conversation.objects.get(**query)
@@ -225,6 +250,6 @@ class ConversationMessagesView(APIView):
                     "created_at": message["created_at"],
                 })
             return JsonResponse({"messages": messages_obj})
-        except:
+        except Conversation.DoesNotExist:
             return JsonResponse({"detail": "Conversation not found", "messages": []})
 

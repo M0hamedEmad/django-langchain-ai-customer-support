@@ -1349,13 +1349,10 @@ def handle_chat(message, session_id, customer_id, company, init_state=None):
     try:
         chatbot = CustomerServiceChatbot(company=company)
 
-        session_id = "session_001"
-        customer_id = "12345"  # optional
-
         final_state = chatbot.handle_message(
             message, session_id, customer_id, init_state=init_state
         )
         return final_state  # includes answer/debug/intent/booking
     except Exception as e:  # safety net
-        print(e)
+        logger.exception("handle_chat failed")
         return e
