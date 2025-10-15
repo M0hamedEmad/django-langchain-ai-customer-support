@@ -4,11 +4,6 @@ from .models import (
     WhatsAppMessage
 )
 
-# @admin.register(Company)
-# class CompanyAdmin(admin.ModelAdmin):
-#     list_display = ("business_name", "business_type", "language", "booking_enabled")
-#     search_fields = ("business_name", "api_key")
-
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ("company", "name", "price", "duration_minutes", "is_active")
@@ -64,13 +59,8 @@ class FAQAdmin(admin.ModelAdmin):
     search_fields = ("question", "answer")
 
 
-class FAQInline(admin.TabularInline):
-    model = FAQ
-    extra = 1
-
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    # inlines = [FAQInline]
     list_display = ("business_name", "business_type", "language", "booking_enabled")
     search_fields = ("business_name", "api_key")
 
