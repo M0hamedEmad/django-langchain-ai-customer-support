@@ -37,6 +37,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _parse_booking_date(value: Optional[str]) -> Optional[datetime]:
+    """Parse free-text booking dates (ISO, Arabic, natural language)."""
+    if not value or isinstance(value, datetime):
+        return value or None
+    text = value.strip()
+    try:
+        return datetime.strptime(text, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        pass
+    try:
+        import dateparser
+
+        return dateparser.parse(text)
+    except Exception:
+        return None
+
+
 class CustomerServiceChatbot:
     """Advanced customer-service chatbot (LangGraph)."""
 
@@ -741,16 +758,37 @@ class CustomerServiceChatbot:
             الخدمة : {selected_service}
         """
 
-        booking = Booking.objects.create(
-            company_id=state["company_id"],
-            customer=customer,
-            service=service,
-            service_text=selected_service,
-            status=Booking.Status.CONFIRMED,
-            notes=notes,
-            source=Booking.Source.CHAT,
-            date=booking_date,
-        )
+        parsed_date = _parse_booking_date(booking_date)
+
+        with transaction.atomic():
+            booking = None
+            # Double-submit guard: an identical still-open booking is reused
+            # instead of creating a duplicate. Skipped when the date is
+            # unparseable (NULL dates never match each other).
+            if parsed_date is not None:
+                booking = (
+                    Booking.objects.select_for_update()
+                    .filter(
+                        company_id=state["company_id"],
+                        customer=customer,
+                        service=service,
+                        service_text=selected_service,
+                        date=parsed_date,
+                        status__in=[Booking.Status.CREATED, Booking.Status.CONFIRMED],
+                    )
+                    .first()
+                )
+            if booking is None:
+                booking = Booking.objects.create(
+                    company_id=state["company_id"],
+                    customer=customer,
+                    service=service,
+                    service_text=selected_service,
+                    status=Booking.Status.CONFIRMED,
+                    notes=notes,
+                    source=Booking.Source.CHAT,
+                    date=parsed_date,
+                )
 
         state["rag_context"] = f"""
             ارسال رساله لانها تم انشاء حجزك واضف هذه المعلومات.
@@ -1204,14 +1242,13 @@ class CustomerServiceChatbot:
 
                 # Update fields if provided
                 if date:
-                    try:
-                        datetime.strptime(date, "%Y-%m-%d")
-                    except (ValueError, TypeError):
+                    parsed = _parse_booking_date(date)
+                    if parsed is None:
                         return {
                             "success": False,
                             "message": "Invalid date format. Use YYYY-MM-DD.",
                         }
-                    booking.date = date
+                    booking.date = parsed
                     changes["date"] = date
 
                 if notes is not None:

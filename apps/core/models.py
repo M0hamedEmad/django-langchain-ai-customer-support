@@ -1,7 +1,11 @@
 from __future__ import annotations
+import logging
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+
+
+logger = logging.getLogger(__name__)
 
 class WebSiteConfig(models.Model):
     LLM_PROVIDERS = [
@@ -128,7 +132,12 @@ class Company(models.Model):
     def save(self, *args, **kwargs):
         from apps.ingestion.etl import upsert_company_info
         super().save(*args, **kwargs)
-        upsert_company_info(self.id)
+        # Vector sync must never block the DB write; rebuild via the
+        # FAQ reindex endpoint if this fails (Phase 4 moves it to a job).
+        try:
+            upsert_company_info(self.id)
+        except Exception:
+            logger.warning("Company vector upsert failed for id=%s", self.id, exc_info=True)
 
 
 class Service(models.Model):
@@ -188,6 +197,16 @@ class Customer(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            # Blank legacy phones ("") stay legal; real phones are unique per company.
+            models.UniqueConstraint(
+                fields=["company", "phone"],
+                condition=~models.Q(phone=""),
+                name="uniq_customer_company_phone",
+            ),
+        ]
+
     def __str__(self) -> str:
         return f"{self.name or self.phone or 'Customer'} @{self.company.business_name}"
 
@@ -210,12 +229,20 @@ class Booking(models.Model):
     service_text = models.CharField(max_length=555, blank=True, null=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.CREATED)
 
-    date = models.CharField(max_length=64, blank=True, null=True)
+    date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
     source = models.CharField(max_length=16, choices=Source.choices, default=Source.CHAT)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["company", "status", "date"],
+                name="booking_company_status_date",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Booking #{self.pk} - {self.service} ({self.status})"
@@ -240,8 +267,11 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        indexes = [
-            models.Index(fields=["company", "session_id"]),
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "session_id"],
+                name="uniq_conversation_company_session",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -264,6 +294,14 @@ class Message(models.Model):
 
     class Meta:
         ordering = ("created_at", "pk")
+        constraints = [
+            # Legacy rows predate dedup (NULL) and stay legal.
+            models.UniqueConstraint(
+                fields=["conversation", "dedup_hash"],
+                condition=models.Q(dedup_hash__isnull=False),
+                name="uniq_message_conversation_dedup",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Msg {self.role} in Conv {self.conversation_id}"
@@ -342,32 +380,44 @@ class JSONFAQ(models.Model):
 
 
     def save(self, *args, **kwargs):
-        from apps.ingestion.etl import upsert_faqs, delete_faq_id
+        from apps.ingestion.etl import delete_json_faq, upsert_faqs
 
-        if not self.id:
-            super().save(*args, **kwargs)
-        else:
-            delete_faq_id(self.company, [self.id])
+        items = self.data
+        if isinstance(items, dict):
+            items = items.get("faqs", [])
+        items = [o for o in (items or []) if isinstance(o, dict)]
 
-        
+        is_update = self.pk is not None
+        super().save(*args, **kwargs)  # pk first: vector ids derive from it
+
         docs = []
-        for obj in self.data:
+        for idx, obj in enumerate(items):
             docs.append({
-                "question": obj.get("question"),
-                "answer": obj.get("answer"),
+                "id": f"json:{self.pk}:{idx}",
+                "question": obj.get("question") or "",
+                "answer": obj.get("answer") or "",
+                "informal_answer": obj.get("informal_answer", ""),
                 "category": obj.get("category", ""),
+                "tags": obj.get("tags", ""),
                 "example_dialogue": obj.get("example_dialogue", ""),
                 "rag_tips": obj.get("rag_tips", ""),
-                "company_id": str(self.company.id),
-                "json_faq_id": str(self.id),
+                "json_faq_id": str(self.pk),
             })
-        
-        upsert_faqs(self.company, docs)
-        
-        super().save(*args, **kwargs)
-        
+
+        # Vector sync must never block the admin save; rebuild via reindex.
+        try:
+            if is_update:
+                delete_json_faq(self.company, self.pk)
+            if docs:
+                upsert_faqs(self.company, docs)
+        except Exception:
+            logger.warning("JSONFAQ vector sync failed for id=%s", self.pk, exc_info=True)
+
     def delete(self, *args, **kwargs):
-        from apps.ingestion.etl import delete_faq_id
-        delete_faq_id(self.company, [self.id])
+        from apps.ingestion.etl import delete_json_faq
+        try:
+            delete_json_faq(self.company, self.pk)
+        except Exception:
+            logger.warning("JSONFAQ vector delete failed for id=%s", self.pk, exc_info=True)
         super().delete(*args, **kwargs)
         

@@ -79,6 +79,18 @@ def delete_faq_id(company, faq_id):
         raise e
 
 
+def delete_json_faq(company, json_faq_pk):
+    """Delete all vectors sourced from one JSONFAQ record (by json_faq_id)."""
+    try:
+        vs = get_vectorstore(company)
+        d = vs.delete(where={"json_faq_id": str(json_faq_pk)})
+        print(f"Deleted JSONFAQ {json_faq_pk} vectors for company {company.id} - {d}")
+        return {"deleted_json_faq": json_faq_pk, "collection": collection_name(company)}
+    except Exception as e:
+        print(e)
+        raise e
+
+
 
 def upsert_company_info(company_id):
     """Upsert company info into Chroma collection for the company, replacing existing vectors for those IDs."""

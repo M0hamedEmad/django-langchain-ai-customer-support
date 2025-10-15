@@ -34,7 +34,7 @@ class ConversationAdmin(admin.ModelAdmin):
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
     list_display = ("conversation", "content", "role", "created_at")
-    list_filter = ("conversation", "role")
+    list_filter = ("role",)
 
 @admin.register(WhatsAppMessage)
 class WhatsAppMessageAdmin(admin.ModelAdmin):
