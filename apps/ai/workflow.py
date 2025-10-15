@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class CustomerServiceChatbot:
-    """نظام خدمة العملاء المتقدم"""
+    """Advanced customer-service chatbot (LangGraph)."""
 
     def __init__(self, company=None):
         
@@ -71,9 +71,9 @@ class CustomerServiceChatbot:
             self.vectorstore = get_vectorstore(self.company)
             
             
-            logger.info("تم إعداد نظام RAG بنجاح")
+            logger.info("RAG system initialized successfully")
         except Exception as e:
-            logger.error(f"خطأ في إعداد نظام RAG: {e}")
+            logger.error("Failed to initialize RAG system: %s", e)
             self.vectorstore = None        
 
 
@@ -87,6 +87,7 @@ class CustomerServiceChatbot:
 
     
     def setup_templates(self):
+        # Intent-analysis prompt (Arabic product copy below; JSON output contract).
         self.intent_classifier_template = ChatPromptTemplate.from_messages([
             ("system", """
             أنت مساعد ذكي لتحليل نوايا العملاء في شركة. حلل الرسالة التالية وحدد النية والنوع الفرعي ودرجة الثقة.
@@ -156,6 +157,7 @@ class CustomerServiceChatbot:
             ("human", "الرسالة: {message}")
         ])
 
+        # Response-generation prompt (Arabic product copy; Iraqi dialect for Arabic input).
         self.response_generator_template = ChatPromptTemplate.from_messages([
             ("system", """
             أنت موظف خدمة زبائن حبّاب وشاطر كلش بنظام الرد على أسئلة الزبائن.
@@ -211,17 +213,18 @@ class CustomerServiceChatbot:
         ])
         
 
+        # Service-matching prompt: map free-text request to best service from catalog.
         self.matching_prompt = ChatPromptTemplate.from_messages([
             ("human", """
                 أنت وكيل مطابقة خدمات دقيق وموضوعي. مهمتك هي قراءة طلب العميل ومطابقته بأفضل خدمة من قائمة الخدمات المقدمة.
 
-                ## قائمة الخدمات المتاحة (Context):
+                ## Available services (Context):
                 {formatted_services}
 
-                ## السؤال:
+                ## Question:
                 {query}
 
-                ## قواعد الإخراج:
+                ## Output rules:
                 1.  يجب أن يكون الإخراج **حصريًا** بصيغة JSON.
                 2.  يجب عليك اختيار **خدمة واحدة فقط** هي الأفضل مطابقة.
                 3.  إذا كانت المطابقة جيدة، اجعل `confidence_score` (الثقة) رقمًا بين 0.80 و 1.00.
@@ -368,7 +371,7 @@ class CustomerServiceChatbot:
                 response = self.llm.invoke(prompt)
 
             
-            # إضافة الرد إلى المحادثة
+            # Append the reply to the conversation
             if "messages" not in state:
                 state["messages"] = []
             
@@ -378,10 +381,10 @@ class CustomerServiceChatbot:
                 "timestamp": datetime.now().isoformat()
             })
             
-            logger.info("تم توليد الاستجابة بنجاح")
+            logger.info("Response generated successfully")
             
         except Exception as e:
-            logger.error(f"خطأ في توليد الاستجابة: {e}")
+            logger.error("Failed to generate response: %s", e)
             error_response = "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى أو التواصل مع فريق الدعم."
             
             state["messages"].append({
@@ -394,14 +397,14 @@ class CustomerServiceChatbot:
     
 
     def receive_message(self, state: ConversationState) -> ConversationState:   
-        messages = state.get('messages', [])[-1] if state.get('messages') else 'لا توجد رسائل'
+        messages = state.get('messages', [])[-1] if state.get('messages') else 'no messages'
         
         try:
             messages = normalize_arabic(messages['content'])
         except Exception as e:
             print(e)
 
-        logger.info(f"تم استقبال رسالة جديدة: {messages}")
+        logger.info("Received new message: %s", messages)
         state["current_step"] = "receive_message"
 
         return state
@@ -466,8 +469,8 @@ class CustomerServiceChatbot:
                     raise ValueError("لم يتم العثور على JSON في الاستجابة")
                     
             except (json.JSONDecodeError, ValueError) as json_error:
-                logger.warning(f"فشل تحليل JSON، محاولة التحليل القديم: {json_error}")
-                # الرجوع للطريقة القديمة
+                logger.warning("JSON parse failed, falling back to legacy parser: %s", json_error)
+                # Fall back to the legacy parser
                 intent = response_text
                 valid_intents = [e.value for e in IntentType]
                 if intent in valid_intents:
@@ -480,13 +483,13 @@ class CustomerServiceChatbot:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            logger.error(f"خطأ في تحليل النية: {e}")
+            logger.error("Failed to analyze intent: %s", e)
             state["current_intent"] = IntentType.UNCLEAR.value
             state["intent_type"] = IntentSubType.UNCLEAR.value
             state["intent_confidence"] = 0.0
         
         state["current_step"] = "analyze_intent"
-        logger.info(f"تم تحديد النية: {state['current_intent']} | النوع: {state.get('intent_type')} | الثقة: {state.get('intent_confidence', 0):.2f} | الصعوبة: {self.hardness}")
+        logger.info(f"Intent determined: {state['current_intent']} | type: {state.get('intent_type')} | confidence: {state.get('intent_confidence', 0):.2f} | hardness: {self.hardness}")
         return state
 
 
@@ -498,7 +501,7 @@ class CustomerServiceChatbot:
         
         query = state["original_message"]
         
-        # البحث في قاعدة المعرفة
+        # Search the knowledge base
         if self.vectorstore:
             relevant_docs = self.vectorstore.similarity_search(query)
             context = "\n\n".join([doc.page_content for doc in relevant_docs])
@@ -506,7 +509,7 @@ class CustomerServiceChatbot:
         else:
             state["rag_context"] = "معلومات عامة عن النادي الرياضي"
         
-        logger.info("تم التعامل مع الاستفسار العام")
+        logger.info("Handled general inquiry")
         return state
 
 
@@ -518,7 +521,7 @@ class CustomerServiceChatbot:
         
         query = state["original_message"]
         
-        # البحث في قاعدة المعرفة
+        # Search the knowledge base
         if self.vectorstore:
             self.handle_general_inquiry(state)
 
@@ -535,7 +538,7 @@ class CustomerServiceChatbot:
         else:
             state["rag_context"] = "معلومات عامة عن النادي الرياضي"
         
-        logger.info("تم التعامل مع الاستفسار العام")
+        logger.info("Handled general inquiry")
         return state
         
 
@@ -717,7 +720,7 @@ class CustomerServiceChatbot:
 
 
     def handle_complaint(self, state: ConversationState) -> ConversationState:
-        """التعامل مع الشكاوى"""
+        """Handle complaints."""
         state["current_step"] = "handle_complaint"
         
         if not state.get("messages"):
@@ -725,7 +728,7 @@ class CustomerServiceChatbot:
         
         complaint_text = state["original_message"]
         
-        # تقييم خطورة الشكوى
+        # Assess complaint severity
         severity_keywords = {
             "عالية": ["خطر", "إصابة", "طبي", "طوارئ", "تسمم", "حريق"],
             "متوسطة": ["سوء معاملة", "خطأ", "تأخير", "رد أموال", "إلغاء"],
@@ -748,12 +751,12 @@ class CustomerServiceChatbot:
         else:
             state["rag_context"] = f"شكراً لك على ملاحظتك. تم تسجيلها برقم {complaint_id} وسنعمل على تحسين خدماتنا."
         
-        logger.info(f"تم تسجيل شكوى بدرجة {severity} - رقم {complaint_id}")
+        logger.info(f"Complaint recorded with severity {severity} - id {complaint_id}")
         return state
 
 
     def clarify_intent(self, state: ConversationState) -> ConversationState:
-        """طلب توضيح النية"""
+        """Ask the customer for clarification."""
         state["current_step"] = "clarify_intent"
         
         state["rag_context"] = (
@@ -766,13 +769,13 @@ class CustomerServiceChatbot:
             "يرجى إخباري كيف يمكنني مساعدتك اليوم؟"
         )
         
-        logger.info("طلب توضيح من العميل")
+        logger.info("Requested clarification from customer")
         return state
     
 
     ## Routing functions
     def route_by_intent(self, state: ConversationState) -> str:
-        """توجيه المحادثة حسب النية"""
+        """Route the conversation by intent."""
         intent = state.get("current_intent", "")
         
         if intent == IntentType.GENERAL_INQUIRY.value:
@@ -1259,13 +1262,13 @@ class CustomerServiceChatbot:
 
 
     def handle_message(self, message: str, session_id: str, customer_id: Optional[str] = None, init_state: Optional[ConversationState] = None) -> str:
-        """التعامل مع رسالة جديدة"""
+        """Handle a new incoming message."""
         try:
             
-            # إعداد الحالة الأولية
+            # Initialize state
             config = {"configurable": {"thread_id": session_id}}
             
-            # الحصول على الحالة الحالية أو إنشاء حالة جديدة
+            # Load current state or create a new one
             current_state = {
                 "messages": [{"role": "user", "content": message, "timestamp": datetime.now().isoformat()}],
                 "session_id": session_id,
@@ -1281,7 +1284,7 @@ class CustomerServiceChatbot:
                 
         except Exception as e:
             import traceback
-            logger.error(f"خطأ في معالجة الرسالة: {e}\n{traceback.format_exc()}")
+            logger.error("Failed to process message: %s\n%s", e, traceback.format_exc())
             return "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى لاحقاً."
 
 
@@ -1405,7 +1408,7 @@ def handle_chat(message, session_id, customer_id, company, init_state=None):
         chatbot = CustomerServiceChatbot(company=company)
 
         session_id = "session_001"
-        customer_id = "12345"  # اختياري
+        customer_id = "12345"  # optional
 
         final_state = chatbot.handle_message(message, session_id, customer_id, init_state=init_state)
         return final_state  # includes answer/debug/intent/booking

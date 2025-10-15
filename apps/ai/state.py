@@ -24,7 +24,7 @@ class GraphState(TypedDict, total=False):
 
 
 class IntentType(Enum):
-    """تعداد أنواع النوايا المختلفة"""
+    """Intent type enumeration."""
     GENERAL_INQUIRY = "استفسار_عام"
     SERVICE_BOOKING = "حجز_خدمة"
     BOOKING_MODIFICATION = "تعديل_حجز"
@@ -34,41 +34,41 @@ class IntentType(Enum):
 
 
 class IntentSubType(Enum):
-    """أنواع فرعية للنوايا"""
-    # استفسار_عام
+    """Intent subtype enumeration."""
+    # General inquiry
     GENERAL_INFO_REQUEST = "طلب_معلومات_عامة"
     SERVICE_INFO_REQUEST = "طلب_معلومات_خدمة"
     
-    # حجز_خدمة
+    # Service booking
     BOOKING_REQUEST = "طلب_حجز"
     BOOKING_INFO_REQUEST = "طلب_معلومات_حجز"
     BOOKING_CONFIRMATION = "تأكيد_طلب_الحجز"
     
-    # تعديل_حجز
+    # Booking modification
     BOOKING_CANCEL = "إلغاء_حجز"
     BOOKING_RESCHEDULE = "تعديل_معلومات_الحجز"
     
-    # شكوى
+    # Complaint
     COMPLAINT_INQUIRY = "استفسار_شكوى"
     COMPLAINT_SUBMISSION = "تقديم_شكوى"
     
-    # استفسار_عضوية
+    # Membership inquiry
     MEMBERSHIP_INFO = "معلومات_عضوية"
     MEMBERSHIP_RENEWAL = "تجديد_عضوية"
     
-    # غير_واضح
+    # Unclear
     UNCLEAR = "غير_واضح"
 
 class ConversationState(TypedDict):
-    """حالة المحادثة"""
+    """Conversation state."""
     company_id: str
     session_id: str    
     messages: List[Dict[str, Any]]
     original_message: str
     
     current_intent: Optional[str]
-    intent_type: Optional[str]  # النوع الفرعي للنية
-    intent_confidence: Optional[float]  # درجة الثقة من 0 إلى 1
+    intent_type: Optional[str]  # Intent subtype
+    intent_confidence: Optional[float]  # Confidence score from 0 to 1
     
     customer_id: Optional[str]
     customer_name: Optional[str]

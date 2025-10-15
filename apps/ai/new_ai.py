@@ -47,11 +47,14 @@ def collection_name() -> str:
     return f"company_{1}"
 
 def get_vectorstore():
+    from django.conf import settings
+
     embeddings = get_embeddings()
+    persist_dir = getattr(settings, "CHROMA_DB_DIR", os.getenv("CHROMA_DB_DIR", ".chroma"))
     vs = Chroma(
         collection_name=collection_name(),
         embedding_function=embeddings,
-        persist_directory="/home/mohamed/Desktop/programming/professional_customer_support/backend/.chroma",
+        persist_directory=persist_dir,
     )
     return vs
 
@@ -65,7 +68,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class IntentType(Enum):
-    """تعداد أنواع النوايا المختلفة"""
+    """Intent type enumeration."""
     GENERAL_INQUIRY = "استفسار_عام"
     SERVICE_BOOKING = "حجز_خدمة"
     BOOKING_MODIFICATION = "تعديل_حجز"
@@ -74,7 +77,7 @@ class IntentType(Enum):
     UNCLEAR = "غير_واضح"
 
 class ConversationState(TypedDict):
-    """حالة المحادثة"""
+    """Conversation state."""
     messages: List[Dict[str, Any]]
     current_intent: Optional[str]
     customer_id: Optional[str]
@@ -89,11 +92,11 @@ class ConversationState(TypedDict):
     current_step: str
 
 class CustomerServiceChatbot:
-    """نظام خدمة العملاء المتقدم"""
+    """Advanced customer-service chatbot (legacy prototype)."""
     
     def __init__(self, gemini_api_key: str, knowledge_base_path: str):
-        """تهيئة نظام خدمة العملاء"""
-        # إعداد النموذج اللغوي
+        """Initialize the customer-service system."""
+        # Set up the language model
         os.environ["GOOGLE_API_KEY"] = gemini_api_key
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-1.5-flash",
@@ -104,37 +107,37 @@ class CustomerServiceChatbot:
         self.memory = SqliteSaver.from_conn_string(":memory:")
 
 
-        # إعداد نظام RAG
+        # Set up the RAG system
         self.setup_rag_system(knowledge_base_path)
         
-        # إعداد قواعد البيانات الوهمية
+        # Set up mock databases
         self.setup_mock_databases()
         
-        # إعداد الرسائل النموذجية
+        # Set up template messages
         self.setup_templates()
         
-        # إعداد الرسم البياني للمحادثة
+        # Set up the conversation graph
         self.setup_conversation_graph()
         
-        # إعداد حفظ نقاط التحقق
+        # Set up checkpointing
     
     def setup_rag_system(self, knowledge_base_path: str):
-        """إعداد نظام استرجاع المعلومات المعزز"""
+        """Set up the retrieval-augmented generation system."""
         try:
-            # إعداد نموذج التضمين
+            # Set up the embedding model
             self.embeddings = get_embeddings()
             
-            # إنشاء مخزن المتجهات
+            # Create the vector store
             self.vectorstore = get_vectorstore()
             
             
-            logger.info("تم إعداد نظام RAG بنجاح")
+            logger.info("RAG system initialized successfully")
         except Exception as e:
-            logger.error(f"خطأ في إعداد نظام RAG: {e}")
+            logger.error("Failed to initialize RAG system: %s", e)
             self.vectorstore = None
     
     def setup_mock_databases(self):
-        """إعداد قواعد البيانات الوهمية للعملاء والحجوزات"""
+        """Set up mock customer/booking databases."""
         self.customers_db = {
             "12345": {
                 "name": "أحمد محمد",
@@ -195,7 +198,8 @@ class CustomerServiceChatbot:
         }
     
     def setup_templates(self):
-        """إعداد القوالب للرسائل المختلفة"""
+        """Set up message templates."""
+        # Intent-classification prompt (Arabic template preserved below)
         self.intent_classifier_template = ChatPromptTemplate.from_messages([
             ("human", """
             أنت مساعد ذكي لتحليل نوايا العملاء في صالة رياضية. حلل الرسالة التالية وحدد النية:
@@ -214,6 +218,7 @@ class CustomerServiceChatbot:
             """)
         ])
         
+        # Customer-service answer prompt (Arabic template preserved below)
         self.response_generator_template = ChatPromptTemplate.from_messages([
             ("human", """
             أنت مساعد خدمة عملاء محترف في صالة رياضية. اجب على استفسار العميل باللغة العربية بطريقة مهذبة ومفيدة.
@@ -233,10 +238,10 @@ class CustomerServiceChatbot:
         ])
     
     def setup_conversation_graph(self):
-        """إعداد الرسم البياني للمحادثة"""
+        """Build the conversation graph."""
         workflow = StateGraph(ConversationState)
         
-        # إضافة العقد
+        # Add nodes
         workflow.add_node("receive_message", self.receive_message)
         workflow.add_node("analyze_intent", self.analyze_intent)
         workflow.add_node("handle_general_inquiry", self.handle_general_inquiry)
@@ -249,10 +254,10 @@ class CustomerServiceChatbot:
         workflow.add_node("generate_response", self.generate_response)
         workflow.add_node("evaluate_satisfaction", self.evaluate_satisfaction)
         
-        # إعداد نقطة البداية
+        # Set the entry point
         workflow.set_entry_point("receive_message")
         
-        # إضافة الحواف الشرطية
+        # Add conditional edges
         workflow.add_conditional_edges(
             "analyze_intent",
             self.route_by_intent,
@@ -266,7 +271,7 @@ class CustomerServiceChatbot:
             }
         )
         
-        # إضافة الحواف للاستجابة
+        # Add response edges
         workflow.add_edge("handle_general_inquiry", "generate_response")
         workflow.add_edge("handle_service_booking", "generate_response")
         workflow.add_edge("handle_booking_modification", "generate_response")
@@ -274,7 +279,7 @@ class CustomerServiceChatbot:
         workflow.add_edge("handle_membership_inquiry", "generate_response")
         workflow.add_edge("clarify_intent", "generate_response")
         
-        # إضافة حواف التقييم
+        # Add evaluation edges
         workflow.add_edge("generate_response", "evaluate_satisfaction")
         workflow.add_conditional_edges(
             "evaluate_satisfaction",
@@ -288,17 +293,17 @@ class CustomerServiceChatbot:
         
         self.app = workflow.compile(checkpointer=self.memory)
     
-    # عقد الرسم البياني
+    # Graph nodes
     def receive_message(self, state: ConversationState) -> ConversationState:
-        """استقبال الرسالة الجديدة"""
+        """Receive a new message."""
         print('*********')
         print(state)
-        logger.info(f"تم استقبال رسالة جديدة: {state.get('messages', [])[-1] if state.get('messages') else 'لا توجد رسائل'}")
+        logger.info("Received new message: %s", state.get('messages', [])[-1] if state.get('messages') else 'no messages')
         state["current_step"] = "receive_message"
         return state
     
     def analyze_intent(self, state: ConversationState) -> ConversationState:
-        """تحليل نية العميل"""
+        """Analyze customer intent."""
         if not state.get("messages"):
             state["current_intent"] = IntentType.UNCLEAR.value
             return state
@@ -310,7 +315,7 @@ class CustomerServiceChatbot:
             response = self.llm.invoke(prompt)
             intent = response.content.strip()
             
-            # التحقق من صحة النية
+            # Validate the intent
             valid_intents = [e.value for e in IntentType]
             if intent in valid_intents:
                 state["current_intent"] = intent
@@ -318,15 +323,15 @@ class CustomerServiceChatbot:
                 state["current_intent"] = IntentType.UNCLEAR.value
                 
         except Exception as e:
-            logger.error(f"خطأ في تحليل النية: {e}")
+            logger.error("Failed to analyze intent: %s", e)
             state["current_intent"] = IntentType.UNCLEAR.value
         
         state["current_step"] = "analyze_intent"
-        logger.info(f"تم تحديد النية: {state['current_intent']}")
+        logger.info("Intent determined: %s", state['current_intent'])
         return state
     
     def handle_general_inquiry(self, state: ConversationState) -> ConversationState:
-        """التعامل مع الاستفسارات العامة"""
+        """Handle general inquiries."""
         state["current_step"] = "handle_general_inquiry"
         
         if not state.get("messages"):
@@ -334,7 +339,7 @@ class CustomerServiceChatbot:
         
         query = state["messages"][-1]["content"]
         
-        # البحث في قاعدة المعرفة
+        # Search the knowledge base
         if self.vectorstore:
             relevant_docs = self.vectorstore.similarity_search(query, k=3)
             context = "\n".join([doc.page_content for doc in relevant_docs])
@@ -342,11 +347,11 @@ class CustomerServiceChatbot:
         else:
             state["rag_context"] = "معلومات عامة عن النادي الرياضي"
         
-        logger.info("تم التعامل مع الاستفسار العام")
+        logger.info("Handled general inquiry")
         return state
     
     def handle_service_booking(self, state: ConversationState) -> ConversationState:
-        """التعامل مع حجز الخدمات"""
+        """Handle service booking."""
         state["current_step"] = "handle_service_booking"
         
         if not state.get("booking_context"):
@@ -369,11 +374,11 @@ class CustomerServiceChatbot:
             booking_id = f"BK{len(self.bookings_db) + 1:03d}"
             state["booking_context"]["booking_id"] = booking_id
             
-        logger.info(f"معالجة حجز الخدمة - الخطوة: {booking_step}")
+        logger.info("Processing service booking - step: %s", booking_step)
         return state
     
     def handle_booking_modification(self, state: ConversationState) -> ConversationState:
-        """التعامل مع تعديل الحجوزات"""
+        """Handle booking modifications."""
         state["current_step"] = "handle_booking_modification"
         
         customer_id = state.get("customer_id")
@@ -399,11 +404,11 @@ class CustomerServiceChatbot:
         else:
             state["rag_context"] = "يرجى تسجيل الدخول أولاً لعرض حجوزاتك."
         
-        logger.info("تم التعامل مع طلب تعديل الحجز")
+        logger.info("Handled booking modification request")
         return state
     
     def handle_complaint(self, state: ConversationState) -> ConversationState:
-        """التعامل مع الشكاوى"""
+        """Handle complaints."""
         state["current_step"] = "handle_complaint"
         
         if not state.get("messages"):
@@ -411,7 +416,7 @@ class CustomerServiceChatbot:
         
         complaint_text = state["messages"][-1]["content"]
         
-        # تقييم خطورة الشكوى
+        # Assess complaint severity
         severity_keywords = {
             "عالية": ["خطر", "إصابة", "طبي", "طوارئ", "تسمم", "حريق"],
             "متوسطة": ["سوء معاملة", "خطأ", "تأخير", "رد أموال", "إلغاء"],
@@ -424,7 +429,7 @@ class CustomerServiceChatbot:
                 severity = level
                 break
         
-        # تسجيل الشكوى
+        # Record the complaint
         complaint_id = f"COM{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
         if severity == "عالية":
@@ -435,11 +440,11 @@ class CustomerServiceChatbot:
         else:
             state["rag_context"] = f"شكراً لك على ملاحظتك. تم تسجيلها برقم {complaint_id} وسنعمل على تحسين خدماتنا."
         
-        logger.info(f"تم تسجيل شكوى بدرجة {severity} - رقم {complaint_id}")
+        logger.info("Complaint recorded with severity %s - id %s", severity, complaint_id)
         return state
     
     def handle_membership_inquiry(self, state: ConversationState) -> ConversationState:
-        """التعامل مع استفسارات العضوية"""
+        """Handle membership inquiries."""
         state["current_step"] = "handle_membership_inquiry"
         
         customer_id = state.get("customer_id")
@@ -454,7 +459,7 @@ class CustomerServiceChatbot:
                 f"البريد الإلكتروني: {customer['email']}\n"
             )
             
-            # حساب الأيام المتبقية
+            # Compute remaining days
             try:
                 end_date = datetime.strptime(customer['membership_end'], '%Y-%m-%d')
                 days_remaining = (end_date - datetime.now()).days
@@ -471,11 +476,11 @@ class CustomerServiceChatbot:
         else:
             state["rag_context"] = "يرجى تسجيل الدخول أولاً لعرض معلومات عضويتك."
         
-        logger.info("تم التعامل مع استفسار العضوية")
+        logger.info("Handled membership inquiry")
         return state
     
     def clarify_intent(self, state: ConversationState) -> ConversationState:
-        """طلب توضيح النية"""
+        """Ask the customer for clarification."""
         state["current_step"] = "clarify_intent"
         
         state["rag_context"] = (
@@ -488,11 +493,11 @@ class CustomerServiceChatbot:
             "يرجى إخباري كيف يمكنني مساعدتك اليوم؟"
         )
         
-        logger.info("طلب توضيح من العميل")
+        logger.info("Requested clarification from customer")
         return state
     
     def escalate_to_human(self, state: ConversationState) -> ConversationState:
-        """تصعيد للعنصر البشري"""
+        """Escalate to a human agent."""
         state["current_step"] = "escalate_to_human"
         
         escalation_id = f"ESC{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -501,11 +506,11 @@ class CustomerServiceChatbot:
             "سيتواصل معك أحد أعضاء فريق خدمة العملاء قريباً. شكراً لصبرك."
         )
         
-        logger.info(f"تم تصعيد المحادثة - رقم {escalation_id}")
+        logger.info("Conversation escalated - id %s", escalation_id)
         return state
     
     def generate_response(self, state: ConversationState) -> ConversationState:
-        """توليد الاستجابة"""
+        """Generate the response."""
         if not state.get("messages"):
             return state
         
@@ -522,7 +527,7 @@ class CustomerServiceChatbot:
             
             response = self.llm.invoke(prompt)
             
-            # إضافة الرد إلى المحادثة
+            # Append the reply to the conversation
             if "messages" not in state:
                 state["messages"] = []
             
@@ -532,10 +537,10 @@ class CustomerServiceChatbot:
                 "timestamp": datetime.now().isoformat()
             })
             
-            logger.info("تم توليد الاستجابة بنجاح")
+            logger.info("Response generated successfully")
             
         except Exception as e:
-            logger.error(f"خطأ في توليد الاستجابة: {e}")
+            logger.error("Failed to generate response: %s", e)
             error_response = "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى أو التواصل مع فريق الدعم."
             
             state["messages"].append({
@@ -547,10 +552,10 @@ class CustomerServiceChatbot:
         return state
     
     def evaluate_satisfaction(self, state: ConversationState) -> ConversationState:
-        """تقييم رضا العميل"""
+        """Score customer satisfaction."""
         state["current_step"] = "evaluate_satisfaction"
         
-        # منطق بسيط لتقييم الرضا (يمكن تطويره أكثر)
+        # Simple satisfaction heuristic (can be improved)
         if state.get("requires_escalation", False):
             state["satisfaction_score"] = 2  # منخفض
         elif state.get("current_intent") == IntentType.COMPLAINT.value:
@@ -558,12 +563,12 @@ class CustomerServiceChatbot:
         else:
             state["satisfaction_score"] = 4  # عالي
         
-        logger.info(f"تقييم الرضا: {state.get('satisfaction_score', 0)}")
+        logger.info("Satisfaction score: %s", state.get('satisfaction_score', 0))
         return state
     
-    # دوال التوجيه
+    # Routing helpers
     def route_by_intent(self, state: ConversationState) -> str:
-        """توجيه المحادثة حسب النية"""
+        """Route the conversation by intent."""
         intent = state.get("current_intent", "")
         
         if intent == IntentType.GENERAL_INQUIRY.value:
@@ -580,21 +585,21 @@ class CustomerServiceChatbot:
             return "unclear"
     
     def check_escalation(self, state: ConversationState) -> str:
-        """فحص الحاجة للتصعيد"""
+        """Check whether escalation is needed."""
         if state.get("requires_escalation", False):
             return "escalate"
         return "continue"
     
-    # دوال المساعدة
+    # Helper functions
     def authenticate_customer(self, phone_or_email: str) -> Optional[str]:
-        """التحقق من هوية العميل"""
+        """Verify customer identity."""
         for customer_id, customer in self.customers_db.items():
             if customer["phone"] == phone_or_email or customer["email"] == phone_or_email:
                 return customer_id
         return None
     
     def log_conversation(self, state: ConversationState):
-        """تسجيل المحادثة"""
+        """Log the conversation."""
         log_data = {
             "session_id": state.get("session_id", ""),
             "customer_id": state.get("customer_id"),
@@ -605,17 +610,17 @@ class CustomerServiceChatbot:
             "message_count": len(state.get("messages", []))
         }
         
-        # في البيئة الحقيقية، سيتم حفظ هذا في قاعدة البيانات
-        logger.info(f"تم تسجيل المحادثة: {json.dumps(log_data, ensure_ascii=False)}")
+        # In production this is persisted to the database
+        logger.info("Conversation logged: %s", json.dumps(log_data, ensure_ascii=False))
     
-    # الدالة الرئيسية للتعامل مع الرسائل
+    # Main entrypoint for incoming messages
     async def handle_message(self, message: str, session_id: str, customer_id: Optional[str] = None) -> str:
-        """التعامل مع رسالة جديدة"""
+        """Handle a new incoming message."""
         try:
-            # إعداد الحالة الأولية
+            # Initialize state
             config = {"configurable": {"thread_id": session_id}}
             
-            # الحصول على الحالة الحالية أو إنشاء حالة جديدة
+            # Load current state or create a new one
             current_state = {
                 "messages": [{"role": "user", "content": message, "timestamp": datetime.now().isoformat()}],
                 "session_id": session_id,
@@ -625,13 +630,13 @@ class CustomerServiceChatbot:
                 "requires_escalation": False
             }
             
-            # تشغيل الرسم البياني
+            # Run the graph
             result = await self.app.ainvoke(current_state, config)
             
-            # تسجيل المحادثة
+            # Log the conversation
             self.log_conversation(result)
             
-            # إرجاع آخر رد من المساعد
+            # Return the latest assistant reply
             assistant_messages = [msg for msg in result.get("messages", []) if msg["role"] == "assistant"]
             
             if assistant_messages:
@@ -640,19 +645,24 @@ class CustomerServiceChatbot:
                 return "عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى."
                 
         except Exception as e:
-            logger.error(f"خطأ في معالجة الرسالة: {e}")
+            logger.error("Failed to process message: %s", e)
             return "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى لاحقاً."
 
-# مثال على الاستخدام
+# Usage example
 async def main():
-    """مثال على استخدام نظام خدمة العملاء"""
-    # إعداد النظام
+    """Customer-service system usage example."""
+    # NOTE: legacy prototype — scheduled for removal in Phase 1.
+    # Credentials must come from environment, never hardcoded.
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise RuntimeError("GOOGLE_API_KEY not set in environment")
+    # Set up the system
     chatbot = CustomerServiceChatbot(
-        gemini_api_key="AIzaSyCTHPLed8JBzi1vhgKnWF44lYA1lbhLhUQ",
+        gemini_api_key=api_key,
         knowledge_base_path="knowledge_base.txt"
     )
     
-    # محاكاة محادثة
+    # Simulate a conversation
     session_id = "session_001"
     customer_id = "12345"  # اختياري
     
@@ -663,9 +673,9 @@ async def main():
     ]
     
     for message in messages:
-        print(f"العميل: {message}")
+        print(f"Customer: {message}")
         response = await chatbot.handle_message(message, session_id, customer_id)
-        print(f"المساعد: {response}")
+        print(f"Assistant: {response}")
         print("-" * 50)
 
 if __name__ == "__main__":

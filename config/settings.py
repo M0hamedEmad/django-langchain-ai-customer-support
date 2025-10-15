@@ -4,13 +4,30 @@ from pathlib import Path
 from typing import Any, Dict
 from dotenv import load_dotenv
 
-load_dotenv()
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-me")
-DEBUG = bool(int(os.environ.get("DJANGO_DEBUG", "1")))
-ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
+# Load <repo>/.env. Legacy config/.env is deprecated and no longer loaded.
+load_dotenv(BASE_DIR / ".env")
+
+
+def _get_env(name: str, default: str | None = None, required: bool = False) -> str | None:
+    value = os.environ.get(name, default)
+    if required and not value:
+        raise ImproperlyConfigured(f"{name} is required but not set in environment")
+    return value
+
+
+SECRET_KEY = _get_env("DJANGO_SECRET_KEY", required=False) or "change-me-generate-a-strong-random-value-AADJTds-skl"
+DEBUG = True
+if DEBUG and SECRET_KEY in {"change-me", "change-me-generate-a-strong-random-value", "dev-secret-key-change-me"}:
+    raise ImproperlyConfigured("Insecure DJANGO_SECRET_KEY with DJANGO_DEBUG=1. Set a strong key.")
+
+_allowed_hosts_raw = _get_env("DJANGO_ALLOWED_HfOSTS", "*" if DEBUG else "")
+ALLOWED_HOSTS = [h.strip() for h in (_allowed_hosts_raw or "").split(",") if h.strip()]
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS is required when DJANGO_DEBUG=0")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -66,13 +83,14 @@ DATABASES: Dict[str, Dict[str, Any]] = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
-
-        'timeout': 20,
-        'check_same_thread': False,  # For concurrent requests
+        "OPTIONS": {
+            "timeout": 20,
+        },
     }
 }
 
-CONN_MAX_AGE = 600 
+# SQLite + long-lived connections = write-lock footgun. Keep 0 for dev/SQLite.
+CONN_MAX_AGE = 0
 
 LANGUAGE_CODE = "en"
 TIME_ZONE = os.environ.get("TIME_ZONE", "UTC")
@@ -101,9 +119,9 @@ CHANNEL_LAYERS = {
 # Chroma
 CHROMA_DB_DIR = os.environ.get("CHROMA_DB_DIR", str(BASE_DIR / ".chroma"))
 
-# LLM provider selection
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai")  # openai|gemini
-LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+# LLM provider selection (openai | gemini | deepseek). No secrets here — keys come from env.
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "gemini")
+LLM_MODEL = os.environ.get("LLM_MODEL", "gemini-2.5-flash")
 
 # Basic structlog setup (optional; can be elaborated later)
 LOGGING = {

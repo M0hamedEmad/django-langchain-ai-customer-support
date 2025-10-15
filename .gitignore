@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env/
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+local_settings.py
+media/
+staticfiles/
+
+# Secrets / local env — never commit real values
+.env
+config/.env
+*.env.local
+
+# Databases (dev only, never commit)
+db.sqlite3
+*.sqlite3
+*.sqlite3-journal
+requirements.txt
+
+# Vector DB (local, rebuild via reindex command)
+.chroma/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Pytest / coverage / mypy
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Streamlit
+.streamlit/secrets.toml

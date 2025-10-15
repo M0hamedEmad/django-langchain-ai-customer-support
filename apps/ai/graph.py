@@ -1,8 +1,12 @@
 from __future__ import annotations
+
+import logging
 from typing import Any, Dict
 
 from .state import GraphState
 # from .workflow import compile_workflow
+
+logger = logging.getLogger(__name__)
 
 
 def run_chat(*, state: Dict[str, Any], company, conversation) -> Dict[str, Any]:
@@ -21,7 +25,8 @@ def run_chat(*, state: Dict[str, Any], company, conversation) -> Dict[str, Any]:
         # Minimal fallback without importing nodes here
         s = state
         s.setdefault("errors", []).append(str(e))
+        # User-facing Arabic fallback (product language).
         s.setdefault("answer", {})["text"] = "عذرًا، حصل خطأ بسيط. خلّينا نجرب كمان مرة."
         s.setdefault("debug", {})["node"] = "error_handler"
-        print(e)
+        logger.exception("LangGraph orchestration failed; returning fallback answer")
         return s
