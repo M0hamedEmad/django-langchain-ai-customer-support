@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from apps.core.models import WhatsAppMessage, Company, Conversation, Message, Customer
 from apps.api.whatsapp_service import WhatsAppService
-from apps.ai.workflow import handle_chat
+from apps.ai.graph import handle_chat
 import time
 import threading
 

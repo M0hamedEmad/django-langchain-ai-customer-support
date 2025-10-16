@@ -13,7 +13,7 @@ from rest_framework import status, permissions
 from apps.core.models import Company, Conversation, Message, Customer, Service, FAQ
 from apps.api.serializers import ServiceSerializer, FAQUpsertItemSerializer
 # from apps.ingestion.etl import upsert_faqs
-from apps.ai.workflow import handle_chat
+from apps.ai.graph import handle_chat
 
 
 logger = logging.getLogger(__name__)

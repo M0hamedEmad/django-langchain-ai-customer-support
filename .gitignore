@@ -24,7 +24,7 @@ config/.env
 db.sqlite3
 *.sqlite3
 *.sqlite3-journal
-requirements.txt
+checkpointer.sqlite3*
 
 # Vector DB (local, rebuild via reindex command)
 .chroma/
