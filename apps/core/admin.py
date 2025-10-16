@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog, JSONFAQ, WebSiteConfig,
-    WhatsAppMessage
+    VectorSyncJob, WhatsAppMessage
 )
 
 @admin.register(Service)
@@ -82,5 +82,17 @@ class WebConfigAdmin(admin.ModelAdmin):
 @admin.register(JSONFAQ)
 class JSONFAQAdmin(admin.ModelAdmin):
     list_display = ("company", "name", "data")
+
+
+@admin.register(VectorSyncJob)
+class VectorSyncJobAdmin(admin.ModelAdmin):
+    list_display = ("company", "kind", "op", "ref_id", "status", "attempts", "updated_at")
+    list_filter = ("status", "kind", "op")
+    actions = ("requeue",)
+
+    @admin.action(description="Requeue selected jobs as pending")
+    def requeue(self, request, queryset):
+        updated = queryset.update(status=VectorSyncJob.Status.PENDING)
+        self.message_user(request, f"Requeued {updated} job(s).")
 
         

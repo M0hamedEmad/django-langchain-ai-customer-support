@@ -130,14 +130,10 @@ class Company(models.Model):
 
 
     def save(self, *args, **kwargs):
-        from apps.ingestion.etl import upsert_company_info
+        from apps.ingestion.outbox import enqueue_vector_sync
         super().save(*args, **kwargs)
-        # Vector sync must never block the DB write; rebuild via the
-        # FAQ reindex endpoint if this fails (Phase 4 moves it to a job).
-        try:
-            upsert_company_info(self.id)
-        except Exception:
-            logger.warning("Company vector upsert failed for id=%s", self.id, exc_info=True)
+        # Vector sync runs in the outbox worker; the DB write never waits.
+        enqueue_vector_sync(self, VectorSyncJob.Kind.COMPANY_INFO, self.pk)
 
 
 class Service(models.Model):
@@ -368,6 +364,54 @@ class AuditLog(models.Model):
 
 
 
+class VectorSyncJob(models.Model):
+    """Outbox row for vector-store sync (processed by `process_outbox`).
+
+    Model saves enqueue instead of calling Chroma inline, so embedding or
+    vector-DB outages never block DB writes and never slow down requests.
+    Repeated saves coalesce into one pending row per (company, kind, ref).
+    """
+
+    class Kind(models.TextChoices):
+        COMPANY_INFO = "company_info", "company_info"
+        JSON_FAQ = "json_faq", "json_faq"
+
+    class Op(models.TextChoices):
+        UPSERT = "upsert", "upsert"
+        DELETE = "delete", "delete"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "pending"
+        PROCESSING = "processing", "processing"
+        DONE = "done", "done"
+        FAILED = "failed", "failed"
+
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="vector_jobs"
+    )
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    op = models.CharField(max_length=8, choices=Op.choices, default=Op.UPSERT)
+    ref_id = models.BigIntegerField(
+        help_text="Company pk for company_info, JSONFAQ pk for json_faq."
+    )
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.PENDING
+    )
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"VectorJob {self.kind}/{self.op} ref={self.ref_id} ({self.status})"
+
+
 
 class JSONFAQ(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="json_fq")
@@ -380,44 +424,17 @@ class JSONFAQ(models.Model):
 
 
     def save(self, *args, **kwargs):
-        from apps.ingestion.etl import delete_json_faq, upsert_faqs
+        from apps.ingestion.outbox import enqueue_vector_sync
 
-        items = self.data
-        if isinstance(items, dict):
-            items = items.get("faqs", [])
-        items = [o for o in (items or []) if isinstance(o, dict)]
-
-        is_update = self.pk is not None
-        super().save(*args, **kwargs)  # pk first: vector ids derive from it
-
-        docs = []
-        for idx, obj in enumerate(items):
-            docs.append({
-                "id": f"json:{self.pk}:{idx}",
-                "question": obj.get("question") or "",
-                "answer": obj.get("answer") or "",
-                "informal_answer": obj.get("informal_answer", ""),
-                "category": obj.get("category", ""),
-                "tags": obj.get("tags", ""),
-                "example_dialogue": obj.get("example_dialogue", ""),
-                "rag_tips": obj.get("rag_tips", ""),
-                "json_faq_id": str(self.pk),
-            })
-
-        # Vector sync must never block the admin save; rebuild via reindex.
-        try:
-            if is_update:
-                delete_json_faq(self.company, self.pk)
-            if docs:
-                upsert_faqs(self.company, docs)
-        except Exception:
-            logger.warning("JSONFAQ vector sync failed for id=%s", self.pk, exc_info=True)
+        super().save(*args, **kwargs)
+        enqueue_vector_sync(self.company, VectorSyncJob.Kind.JSON_FAQ, self.pk)
 
     def delete(self, *args, **kwargs):
-        from apps.ingestion.etl import delete_json_faq
-        try:
-            delete_json_faq(self.company, self.pk)
-        except Exception:
-            logger.warning("JSONFAQ vector delete failed for id=%s", self.pk, exc_info=True)
+        from apps.ingestion.outbox import enqueue_vector_sync
+
+        company, pk = self.company, self.pk
         super().delete(*args, **kwargs)
+        enqueue_vector_sync(
+            company, VectorSyncJob.Kind.JSON_FAQ, pk, op=VectorSyncJob.Op.DELETE
+        )
         
