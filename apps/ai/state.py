@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, TypedDict, List, Optional
+from typing import Any, Dict, NotRequired, TypedDict, List, Optional
 
 from enum import Enum
 from apps.core.models import Service
@@ -74,6 +74,7 @@ class ConversationState(TypedDict):
     satisfaction_score: Optional[int]
     language: str
     current_step: str
+    hardness: NotRequired[float]
 
     errors: List[str]
     debug: Dict[str, Any]

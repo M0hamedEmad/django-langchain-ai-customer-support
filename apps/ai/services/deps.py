@@ -10,6 +10,12 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from apps.ai.llm_providers import get_chat_model
+from apps.ai.prompts import (
+    build_booking_confirm_prompt,
+    build_intent_classifier_prompt,
+    build_response_generator_prompt,
+    build_service_matching_prompt,
+)
 from apps.ai.retrieval.chroma_store import get_vectorstore
 from apps.core.models import Service, WebSiteConfig
 
@@ -31,6 +37,10 @@ class ChatbotDeps:
     services_qs: Any
     services_info: str
     hardness: int = 5
+    intent_classifier_template: Any = None
+    response_generator_template: Any = None
+    matching_prompt: Any = None
+    booking_confirm_prompt: Any = None
 
 
 def build_deps(company) -> ChatbotDeps:
@@ -80,4 +90,8 @@ def build_deps(company) -> ChatbotDeps:
         services_qs=services_qs,
         services_info=services_info,
         hardness=hardness,
+        intent_classifier_template=build_intent_classifier_prompt(),
+        response_generator_template=build_response_generator_prompt(),
+        matching_prompt=build_service_matching_prompt(),
+        booking_confirm_prompt=build_booking_confirm_prompt(),
     )
