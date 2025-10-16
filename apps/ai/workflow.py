@@ -24,17 +24,16 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from .state import ConversationState, IntentType, IntentSubType
 
-from .llm_providers import get_chat_model
+from apps.ai.services import get_deps
 
 from apps.ai.retrieval.arabic_preprocess import normalize_arabic
-from apps.ai.retrieval.chroma_store import get_vectorstore
 from apps.ai.prompts import (
     build_booking_confirm_prompt,
     build_intent_classifier_prompt,
     build_response_generator_prompt,
     build_service_matching_prompt,
 )
-from apps.core.models import Service, Customer, Booking, WebSiteConfig
+from apps.core.models import Service, Customer, Booking
 
 from langchain_core.tools import tool
 
@@ -64,53 +63,22 @@ class CustomerServiceChatbot:
     """Advanced customer-service chatbot (LangGraph)."""
 
     def __init__(self, company=None):
-
         self.company = company
 
-        web_config = WebSiteConfig.objects.filter().first()
-        llm_provider = None
-        llm_model = None
-        p_llm_provider = None
-        p_llm_model = None
-        self.hardness = 5
-
-        if web_config:
-            llm_provider = web_config.llm_provider
-            llm_model = web_config.get_llm_model()
-            p_llm_provider = web_config.premium_llm_provider
-            p_llm_model = web_config.get_pm_llm_model()
-            self.hardness = web_config.hardness_score
-
-        self.llm = get_chat_model(provider=llm_provider, model_name=llm_model)
-
-        self.pm_llm = get_chat_model(provider=p_llm_provider, model_name=p_llm_model)
-
-        self.setup_rag_system()
-
-        self.setup_data()
+        # Heavy resources (LLMs, vector store, catalog snapshot) are shared
+        # per company via services.cache; only graph compilation stays local
+        # until P3-4. hardness is copied, never shared: nodes mutate it.
+        self.deps = get_deps(company)
+        self.llm = self.deps.llm
+        self.pm_llm = self.deps.pm_llm
+        self.vectorstore = self.deps.vectorstore
+        self.services_db = self.deps.services_qs
+        self.services_info = self.deps.services_info
+        self.hardness = self.deps.hardness
 
         self.setup_templates()
 
         self.setup_conversation_graph()
-
-    def setup_rag_system(self):
-        try:
-            self.vectorstore = get_vectorstore(self.company)
-
-            logger.info("RAG system initialized successfully")
-        except Exception as e:
-            logger.error("Failed to initialize RAG system: %s", e)
-            self.vectorstore = None
-
-    def setup_data(self):
-        self.services_db = Service.objects.filter(company=self.company, is_active=True)
-
-        self.services_info = "\n".join(
-            [
-                f"id: {s.id}, name:{s.name}, price: {s.price}, description: {s.description}"
-                for s in self.services_db
-            ]
-        )
 
     def setup_templates(self):
         # Prompt copy lives in apps.ai.prompts (Arabic product language).
@@ -118,6 +86,7 @@ class CustomerServiceChatbot:
         self.response_generator_template = build_response_generator_prompt()
         self.matching_prompt = build_service_matching_prompt()
         self.booking_confirm_prompt = build_booking_confirm_prompt()
+
     def setup_conversation_graph(self):
         """
         Build a LangGraph StateGraph using the node functions.
