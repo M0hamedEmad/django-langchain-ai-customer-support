@@ -4,24 +4,6 @@ from typing import Any, Dict, TypedDict, List, Optional
 from enum import Enum
 from apps.core.models import Service
 
-class GraphState(TypedDict, total=False):
-
-    turn: int
-    original_message: str
-    message: str
-    lang: str
-    customer: Dict[str, Optional[str]]
-    # Last N messages as conversation history to ground responses
-    history: List[Dict[str, str]]  # each: {"role": "user|assistant|system", "content": str}
-    intent: Dict[str, Any]
-    booking: Dict[str, Any]
-    retrieval: Dict[str, Any]
-    answer: Dict[str, Any]
-    escalation: Dict[str, Any]
-    errors: List[str]
-    debug: Dict[str, Any]
-
-
 
 class IntentType(Enum):
     """Intent type enumeration."""
