@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from apps.ai.llm_providers import get_chat_model
 from apps.ai.prompts import (

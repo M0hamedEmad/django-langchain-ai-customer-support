@@ -9,7 +9,7 @@ never retried in a poison loop. Requeue from the admin by clearing
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from apps.ai.graph import handle_chat
 from apps.core.models import Conversation, Customer, Message, WhatsAppMessage
@@ -39,9 +39,9 @@ def _ensure_customer_and_conversation(company, phone: str, sender_name: str = ""
     return customer, conv
 
 
-def _build_state(company, conv, customer, message: str) -> Dict[str, Any]:
+def _build_state(company, conv, customer, message: str) -> dict[str, Any]:
     # Mirrors ChatStreamView.post(): last-8 history + current message.
-    recent: List[Message] = list(
+    recent: list[Message] = list(
         Message.objects.filter(conversation=conv).order_by("-created_at")[:8]
     )
     history = [{"role": m.role, "content": m.content} for m in reversed(recent)]

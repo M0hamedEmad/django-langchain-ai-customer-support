@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 import logging
+
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
-
 
 logger = logging.getLogger(__name__)
+
 
 class WebSiteConfig(models.Model):
     LLM_PROVIDERS = [
@@ -18,15 +19,23 @@ class WebSiteConfig(models.Model):
         ("gemini-2.5-flash", "gemini-2.5-flash"),
         ("gemini-2.5-pro", "gemini-2.5-pro"),
         ("deepseek/deepseek-chat-v3.1:free", "deepseek"),
-        ("other", "other")
+        ("other", "other"),
     ]
 
-    llm_provider = models.CharField(max_length=32, choices=LLM_PROVIDERS, null=True, blank=True)
-    llm_model = models.CharField(max_length=128, null=True, blank=True, choices=LLM_MODELS)
+    llm_provider = models.CharField(
+        max_length=32, choices=LLM_PROVIDERS, null=True, blank=True
+    )
+    llm_model = models.CharField(
+        max_length=128, null=True, blank=True, choices=LLM_MODELS
+    )
     other = models.CharField(max_length=255, null=True, blank=True)
 
-    premium_llm_provider = models.CharField(max_length=32, choices=LLM_PROVIDERS, null=True, blank=True)
-    premium_llm_model = models.CharField(max_length=128, null=True, blank=True, choices=LLM_MODELS)
+    premium_llm_provider = models.CharField(
+        max_length=32, choices=LLM_PROVIDERS, null=True, blank=True
+    )
+    premium_llm_model = models.CharField(
+        max_length=128, null=True, blank=True, choices=LLM_MODELS
+    )
     premium_other = models.CharField(max_length=255, null=True, blank=True)
 
     hardness_score = models.IntegerField(default=5)
@@ -38,7 +47,6 @@ class WebSiteConfig(models.Model):
     def __str__(self):
         return f"LLM Config {self.llm_provider} {self.llm_model}"
 
-
     def save(self, *args, **kwargs):
 
         if not self.pk:
@@ -47,14 +55,18 @@ class WebSiteConfig(models.Model):
 
         self.check_provider(self.llm_provider, self.llm_model)
         self.check_provider(self.premium_llm_provider, self.premium_llm_model)
-        
+
         super().save(*args, **kwargs)
 
     def get_llm_model(self):
-        return self.llm_model if self.llm_model != 'other' else self.other
+        return self.llm_model if self.llm_model != "other" else self.other
 
     def get_pm_llm_model(self):
-        return self.premium_llm_model if self.premium_llm_model != 'other' else self.premium_other
+        return (
+            self.premium_llm_model
+            if self.premium_llm_model != "other"
+            else self.premium_other
+        )
 
     def check_provider(self, provider, llm):
         if not provider or not llm or llm == "other":
@@ -67,8 +79,6 @@ class WebSiteConfig(models.Model):
             raise ValueError("deepseek LLM model must start with 'deepseek'")
 
 
-
-
 class Company(models.Model):
     class BusinessType(models.TextChoices):
         ECOMMERCE = "ecommerce", "ecommerce"
@@ -76,7 +86,9 @@ class Company(models.Model):
         RESTAURANT = "restaurant", "restaurant"
         GENERAL = "general", "general"
 
-    business_type = models.CharField(max_length=32, choices=BusinessType.choices, default=BusinessType.GENERAL)
+    business_type = models.CharField(
+        max_length=32, choices=BusinessType.choices, default=BusinessType.GENERAL
+    )
     business_name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     working_hours = models.TextField(null=True, blank=True)
@@ -126,18 +138,20 @@ class Company(models.Model):
             {self.business_name}
         Description:
              {self.description}
-        """        
-
+        """
 
     def save(self, *args, **kwargs):
         from apps.ingestion.outbox import enqueue_vector_sync
+
         super().save(*args, **kwargs)
         # Vector sync runs in the outbox worker; the DB write never waits.
         enqueue_vector_sync(self, VectorSyncJob.Kind.COMPANY_INFO, self.pk)
 
 
 class Service(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="services")
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="services"
+    )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -163,7 +177,6 @@ class FAQ(models.Model):
     def __str__(self) -> str:
         return f"FAQ[{self.company.business_name}] {self.category or ''}"
 
-
     # def save(self, *args, **kwargs):
     #     from apps.ingestion.etl import upsert_faqs
     #     super().save(*args, **kwargs)
@@ -179,11 +192,13 @@ class FAQ(models.Model):
     #             "rag_tips": self.rag_tips
     #         }
     #     ]
-    #     upsert_faqs(self.company, data)        
+    #     upsert_faqs(self.company, data)
 
 
 class Customer(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="customers")
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="customers"
+    )
     external_id = models.CharField(max_length=255, blank=True)
     name = models.CharField(max_length=255, blank=True)
     phone = models.CharField(max_length=64, blank=True)
@@ -219,15 +234,33 @@ class Booking(models.Model):
         PANEL = "panel", "panel"
         API = "api", "api"
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="bookings")
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name="bookings")
-    service = models.ForeignKey(Service, on_delete=models.PROTECT, related_name="bookings", null=True, blank=True)
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="bookings"
+    )
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="bookings",
+    )
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.PROTECT,
+        related_name="bookings",
+        null=True,
+        blank=True,
+    )
     service_text = models.CharField(max_length=555, blank=True, null=True)
-    status = models.CharField(max_length=16, choices=Status.choices, default=Status.CREATED)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.CREATED
+    )
 
     date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
-    source = models.CharField(max_length=16, choices=Source.choices, default=Source.CHAT)
+    source = models.CharField(
+        max_length=16, choices=Source.choices, default=Source.CHAT
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -250,10 +283,20 @@ class Conversation(models.Model):
         ESCALATED = "escalated", "escalated"
         CLOSED = "closed", "closed"
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="conversations")
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name="conversations")
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="conversations"
+    )
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="conversations",
+    )
     session_id = models.CharField(max_length=255, db_index=True)
-    status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.OPEN
+    )
     summary = models.TextField(blank=True)
     last_intent = models.CharField(max_length=32, blank=True)
 
@@ -280,7 +323,9 @@ class Message(models.Model):
         ASSISTANT = "assistant", "assistant"
         SYSTEM = "system", "system"
 
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages", db_index=True)
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name="messages", db_index=True
+    )
     role = models.CharField(max_length=16, choices=Role.choices)
     content = models.TextField()
     meta = models.JSONField(default=dict, blank=True)
@@ -306,8 +351,11 @@ class Message(models.Model):
 class WhatsAppMessage(models.Model):
     message_id = models.CharField(max_length=255, unique=True, db_index=True)
     company = models.ForeignKey(
-        Company, on_delete=models.CASCADE, related_name="whatsapp_messages",
-        null=True, blank=True,
+        Company,
+        on_delete=models.CASCADE,
+        related_name="whatsapp_messages",
+        null=True,
+        blank=True,
         help_text="Set by the webhook; legacy polled rows predate it.",
     )
     phone_number = models.CharField(max_length=20)
@@ -319,14 +367,13 @@ class WhatsAppMessage(models.Model):
     reply_text = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["is_processed", "received_at"]),
         ]
-    
+
     def __str__(self):
         return f"{self.phone_number}: {self.message_body[:50]}"
-
 
 
 class EscalationTicket(models.Model):
@@ -340,10 +387,16 @@ class EscalationTicket(models.Model):
         ASSIGNED = "assigned", "assigned"
         RESOLVED = "resolved", "resolved"
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="escalations")
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="escalations")
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="escalations"
+    )
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name="escalations"
+    )
     reason = models.TextField()
-    priority = models.CharField(max_length=16, choices=Priority.choices, default=Priority.MEDIUM)
+    priority = models.CharField(
+        max_length=16, choices=Priority.choices, default=Priority.MEDIUM
+    )
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.NEW)
     transcript_snapshot = models.TextField(blank=True)
 
@@ -359,7 +412,9 @@ class AuditLog(models.Model):
         USER = "user", "user"
         ADMIN = "admin", "admin"
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="audit_logs")
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="audit_logs"
+    )
     actor = models.CharField(max_length=16, choices=Actor.choices, default=Actor.SYSTEM)
     action = models.CharField(max_length=255)
     target_type = models.CharField(max_length=64, blank=True)
@@ -370,7 +425,6 @@ class AuditLog(models.Model):
 
     def __str__(self) -> str:
         return f"Audit {self.actor} {self.action}"
-
 
 
 class VectorSyncJob(models.Model):
@@ -421,16 +475,15 @@ class VectorSyncJob(models.Model):
         return f"VectorJob {self.kind}/{self.op} ref={self.ref_id} ({self.status})"
 
 
-
 class JSONFAQ(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="json_fq")
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="json_fq"
+    )
     name = models.CharField(max_length=100, blank=True, null=True)  # optional label
     data = models.JSONField()
 
     def __str__(self):
         return self.name or f"JSON #{self.pk}"
-
-
 
     def save(self, *args, **kwargs):
         from apps.ingestion.outbox import enqueue_vector_sync
@@ -446,4 +499,3 @@ class JSONFAQ(models.Model):
         enqueue_vector_sync(
             company, VectorSyncJob.Kind.JSON_FAQ, pk, op=VectorSyncJob.Op.DELETE
         )
-        

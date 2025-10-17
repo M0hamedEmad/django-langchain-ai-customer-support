@@ -4,35 +4,48 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0016_alter_websiteconfig_llm_model_and_more'),
+        ("core", "0016_alter_websiteconfig_llm_model_and_more"),
     ]
 
     operations = [
         migrations.RemoveIndex(
-            model_name='conversation',
-            name='core_conver_company_141da1_idx',
+            model_name="conversation",
+            name="core_conver_company_141da1_idx",
         ),
         migrations.AddField(
-            model_name='booking',
-            name='scheduled_at',
+            model_name="booking",
+            name="scheduled_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddIndex(
-            model_name='booking',
-            index=models.Index(fields=['company', 'status', 'scheduled_at'], name='core_bookin_company_af3a37_idx'),
+            model_name="booking",
+            index=models.Index(
+                fields=["company", "status", "scheduled_at"],
+                name="core_bookin_company_af3a37_idx",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='conversation',
-            constraint=models.UniqueConstraint(fields=('company', 'session_id'), name='uniq_conversation_company_session'),
+            model_name="conversation",
+            constraint=models.UniqueConstraint(
+                fields=("company", "session_id"),
+                name="uniq_conversation_company_session",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='customer',
-            constraint=models.UniqueConstraint(condition=models.Q(('phone', ''), _negated=True), fields=('company', 'phone'), name='uniq_customer_company_phone'),
+            model_name="customer",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("phone", ""), _negated=True),
+                fields=("company", "phone"),
+                name="uniq_customer_company_phone",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='message',
-            constraint=models.UniqueConstraint(condition=models.Q(('dedup_hash__isnull', False)), fields=('conversation', 'dedup_hash'), name='uniq_message_conversation_dedup'),
+            model_name="message",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("dedup_hash__isnull", False)),
+                fields=("conversation", "dedup_hash"),
+                name="uniq_message_conversation_dedup",
+            ),
         ),
     ]

@@ -4,25 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='company',
-            name='company_contact',
+            model_name="company",
+            name="company_contact",
             field=models.CharField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='company',
-            name='company_policies',
+            model_name="company",
+            name="company_policies",
             field=models.CharField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='company',
-            name='working_hours',
+            model_name="company",
+            name="working_hours",
             field=models.CharField(blank=True, null=True),
         ),
     ]

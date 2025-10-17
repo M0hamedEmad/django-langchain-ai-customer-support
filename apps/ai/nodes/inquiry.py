@@ -45,13 +45,25 @@ def _inquiry(
     return state
 
 
-def handle_general_inquiry(state: ConversationState, *, company, deps) -> ConversationState:
-    return _inquiry(state, company=company, deps=deps, include_services=False,
-                    step="handle_general_inquiry")
+def handle_general_inquiry(
+    state: ConversationState, *, company, deps
+) -> ConversationState:
+    return _inquiry(
+        state,
+        company=company,
+        deps=deps,
+        include_services=False,
+        step="handle_general_inquiry",
+    )
 
 
 def handle_service_information(
     state: ConversationState, *, company, deps
 ) -> ConversationState:
-    return _inquiry(state, company=company, deps=deps, include_services=True,
-                    step="handle_service_information")
+    return _inquiry(
+        state,
+        company=company,
+        deps=deps,
+        include_services=True,
+        step="handle_service_information",
+    )

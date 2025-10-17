@@ -1,8 +1,21 @@
 from django.contrib import admin
+
 from .models import (
-    Company, Service, FAQ, Customer, Booking, Conversation, Message, EscalationTicket, AuditLog, JSONFAQ, WebSiteConfig,
-    VectorSyncJob, WhatsAppMessage
+    FAQ,
+    JSONFAQ,
+    AuditLog,
+    Booking,
+    Company,
+    Conversation,
+    Customer,
+    EscalationTicket,
+    Message,
+    Service,
+    VectorSyncJob,
+    WebSiteConfig,
+    WhatsAppMessage,
 )
+
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
@@ -10,10 +23,9 @@ class ServiceAdmin(admin.ModelAdmin):
     list_filter = ("company", "is_active")
 
     fieldsets = (
-        (None, {
-            "fields": ("company", "name", "description", "price", "is_active")
-        }),
+        (None, {"fields": ("company", "name", "description", "price", "is_active")}),
     )
+
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -21,30 +33,45 @@ class CustomerAdmin(admin.ModelAdmin):
     list_filter = ("company",)
     search_fields = ("name", "phone", "email")
 
+
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
     list_display = ("company", "service", "customer", "status", "date")
     list_filter = ("company", "status")
+
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
     list_display = ("company", "session_id", "status", "updated_at")
     list_filter = ("company", "status")
 
+
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
     list_display = ("conversation", "content", "role", "created_at")
     list_filter = ("role",)
 
+
 @admin.register(WhatsAppMessage)
 class WhatsAppMessageAdmin(admin.ModelAdmin):
-    list_display = ("message_id", "company", "phone_number", "sender_name", "message_body", "timestamp", "received_at", "is_processed")
+    list_display = (
+        "message_id",
+        "company",
+        "phone_number",
+        "sender_name",
+        "message_body",
+        "timestamp",
+        "received_at",
+        "is_processed",
+    )
     list_filter = ("company", "is_processed")
+
 
 @admin.register(EscalationTicket)
 class EscalationTicketAdmin(admin.ModelAdmin):
     list_display = ("company", "conversation", "priority", "status", "created_at")
     list_filter = ("company", "priority", "status")
+
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
@@ -65,19 +92,44 @@ class CompanyAdmin(admin.ModelAdmin):
     search_fields = ("business_name", "api_key")
 
     fieldsets = (
-        (None, {
-            "fields": (
-                "business_type", "business_name", "api_key", "description", "common_questions", "common_services")
-        }),
-        ("Extra", {
-            "fields": ("company_policies", "company_contact", "language", "booking_enabled")
-        })
+        (
+            None,
+            {
+                "fields": (
+                    "business_type",
+                    "business_name",
+                    "api_key",
+                    "description",
+                    "common_questions",
+                    "common_services",
+                )
+            },
+        ),
+        (
+            "Extra",
+            {
+                "fields": (
+                    "company_policies",
+                    "company_contact",
+                    "language",
+                    "booking_enabled",
+                )
+            },
+        ),
     )
 
 
 @admin.register(WebSiteConfig)
 class WebConfigAdmin(admin.ModelAdmin):
-    list_display = ("llm_provider", "llm_model", "other", "premium_llm_provider", "premium_llm_model", "premium_other")
+    list_display = (
+        "llm_provider",
+        "llm_model",
+        "other",
+        "premium_llm_provider",
+        "premium_llm_model",
+        "premium_other",
+    )
+
 
 @admin.register(JSONFAQ)
 class JSONFAQAdmin(admin.ModelAdmin):
@@ -86,7 +138,15 @@ class JSONFAQAdmin(admin.ModelAdmin):
 
 @admin.register(VectorSyncJob)
 class VectorSyncJobAdmin(admin.ModelAdmin):
-    list_display = ("company", "kind", "op", "ref_id", "status", "attempts", "updated_at")
+    list_display = (
+        "company",
+        "kind",
+        "op",
+        "ref_id",
+        "status",
+        "attempts",
+        "updated_at",
+    )
     list_filter = ("status", "kind", "op")
     actions = ("requeue",)
 
@@ -94,5 +154,3 @@ class VectorSyncJobAdmin(admin.ModelAdmin):
     def requeue(self, request, queryset):
         updated = queryset.update(status=VectorSyncJob.Status.PENDING)
         self.message_user(request, f"Requeued {updated} job(s).")
-
-        

@@ -45,9 +45,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options["loop"]:
-            self.stdout.write(
-                f"process_outbox: looping every {options['interval']}s"
-            )
+            self.stdout.write(f"process_outbox: looping every {options['interval']}s")
             try:
                 while True:
                     summary = process_pending(limit=options["limit"])

@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import os
 from pathlib import Path
-from typing import Any, Dict
-from dotenv import load_dotenv
+from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -12,17 +13,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
-def _get_env(name: str, default: str | None = None, required: bool = False) -> str | None:
+def _get_env(
+    name: str, default: str | None = None, required: bool = False
+) -> str | None:
     value = os.environ.get(name, default)
     if required and not value:
         raise ImproperlyConfigured(f"{name} is required but not set in environment")
     return value
 
 
-SECRET_KEY = _get_env("DJANGO_SECRET_KEY", required=False) or "change-me-generate-a-strong-random-value-AADJTds-skl"
+SECRET_KEY = (
+    _get_env("DJANGO_SECRET_KEY", required=False)
+    or "change-me-generate-a-strong-random-value-AADJTds-skl"
+)
 DEBUG = True
-if DEBUG and SECRET_KEY in {"change-me", "change-me-generate-a-strong-random-value", "dev-secret-key-change-me"}:
-    raise ImproperlyConfigured("Insecure DJANGO_SECRET_KEY with DJANGO_DEBUG=1. Set a strong key.")
+if DEBUG and SECRET_KEY in {
+    "change-me",
+    "change-me-generate-a-strong-random-value",
+    "dev-secret-key-change-me",
+}:
+    raise ImproperlyConfigured(
+        "Insecure DJANGO_SECRET_KEY with DJANGO_DEBUG=1. Set a strong key."
+    )
 
 _allowed_hosts_raw = _get_env("DJANGO_ALLOWED_HfOSTS", "*" if DEBUG else "")
 ALLOWED_HOSTS = [h.strip() for h in (_allowed_hosts_raw or "").split(",") if h.strip()]
@@ -36,11 +48,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     # Third-party
     "rest_framework",
-    
-
     # Local apps
     "apps.core",
     "apps.api",
@@ -80,7 +89,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASES: Dict[str, Dict[str, Any]] = {
+DATABASES: dict[str, dict[str, Any]] = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",

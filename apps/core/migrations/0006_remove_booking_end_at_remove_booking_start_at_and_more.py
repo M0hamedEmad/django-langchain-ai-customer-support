@@ -4,23 +4,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0005_booking_service_text_conversation_important_data_and_more'),
+        ("core", "0005_booking_service_text_conversation_important_data_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='booking',
-            name='end_at',
+            model_name="booking",
+            name="end_at",
         ),
         migrations.RemoveField(
-            model_name='booking',
-            name='start_at',
+            model_name="booking",
+            name="start_at",
         ),
         migrations.AddField(
-            model_name='booking',
-            name='date',
+            model_name="booking",
+            name="date",
             field=models.CharField(blank=True, max_length=64, null=True),
         ),
     ]

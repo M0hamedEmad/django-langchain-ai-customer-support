@@ -12,9 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def receive_message(state: ConversationState, *, company, deps) -> ConversationState:
-    messages = (
-        state.get("messages", [])[-1] if state.get("messages") else "no messages"
-    )
+    messages = state.get("messages", [])[-1] if state.get("messages") else "no messages"
 
     try:
         messages = normalize_arabic(messages["content"])
@@ -81,12 +79,12 @@ def analyze_intent(state: ConversationState, *, company, deps) -> ConversationSt
                         "customer_phone", None
                     )
                     # state["customer_address"] = customer.get("address") or state.get("customer_address", None)
-                    state["selected_service"] = customer.get(
-                        "service"
-                    ) or state.get("selected_service", None)
-                    state["booking_date"] = customer.get(
-                        "booking_date"
-                    ) or state.get("booking_date", None)
+                    state["selected_service"] = customer.get("service") or state.get(
+                        "selected_service", None
+                    )
+                    state["booking_date"] = customer.get("booking_date") or state.get(
+                        "booking_date", None
+                    )
                     state["booking_id"] = customer.get("booking_id") or state.get(
                         "booking_id", None
                     )

@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0003_alter_company_company_contact_and_more'),
+        ("core", "0003_alter_company_company_contact_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='company',
-            name='common_questions',
+            model_name="company",
+            name="common_questions",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='company',
-            name='common_services',
+            model_name="company",
+            name="common_services",
             field=models.TextField(blank=True, null=True),
         ),
     ]

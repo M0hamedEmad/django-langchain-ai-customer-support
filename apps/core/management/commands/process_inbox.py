@@ -23,12 +23,8 @@ class Command(BaseCommand):
     help = "Reply to unprocessed WhatsAppMessage rows."
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--once", action="store_true", help="One pass and exit."
-        )
-        parser.add_argument(
-            "--loop", action="store_true", help="Run forever, polling."
-        )
+        parser.add_argument("--once", action="store_true", help="One pass and exit.")
+        parser.add_argument("--loop", action="store_true", help="Run forever, polling.")
         parser.add_argument(
             "--interval", type=int, default=15, help="Seconds between polls."
         )
@@ -38,9 +34,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options["loop"]:
-            self.stdout.write(
-                f"process_inbox: looping every {options['interval']}s"
-            )
+            self.stdout.write(f"process_inbox: looping every {options['interval']}s")
             try:
                 while True:
                     summary = process_inbox(limit=options["limit"])

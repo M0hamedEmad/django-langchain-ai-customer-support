@@ -33,7 +33,9 @@ def format_bookings_context(bookings) -> str:
     return bookings_context
 
 
-def handle_service_booking(state: ConversationState, *, company, deps) -> ConversationState:
+def handle_service_booking(
+    state: ConversationState, *, company, deps
+) -> ConversationState:
     state["current_step"] = "handle_service_booking"
 
     # Check what information is missing
@@ -143,7 +145,9 @@ def confirm_booking(state: ConversationState, *, company, deps) -> ConversationS
     return state
 
 
-def execute_create_booking(state: ConversationState, *, company, deps) -> ConversationState:
+def execute_create_booking(
+    state: ConversationState, *, company, deps
+) -> ConversationState:
     """Handle booking creation"""
     state["current_step"] = "execute_create_booking"
     service = state.get("service_object", None)
@@ -157,7 +161,6 @@ def execute_create_booking(state: ConversationState, *, company, deps) -> Conver
     customer_phone = state.get("customer_phone", "")
     customer_address = state.get("customer_address", "")
     booking_date = state.get("booking_date", "")
-    booking_id = state.get("booking_id", "")
     selected_service = state.get("selected_service", "")
 
     notes = f"""

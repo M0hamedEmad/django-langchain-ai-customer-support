@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0006_remove_booking_end_at_remove_booking_start_at_and_more'),
+        ("core", "0006_remove_booking_end_at_remove_booking_start_at_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='message',
-            name='dedup_hash',
+            model_name="message",
+            name="dedup_hash",
             field=models.CharField(blank=True, max_length=64, null=True),
         ),
     ]

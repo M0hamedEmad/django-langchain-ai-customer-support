@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, Tuple
+from typing import Any
 
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -31,7 +31,7 @@ from apps.core.models import WhatsAppMessage
 logger = logging.getLogger(__name__)
 
 
-def normalize_payload(data: Dict[str, Any]) -> Tuple[str, str, str, str, int] | None:
+def normalize_payload(data: dict[str, Any]) -> tuple[str, str, str, str, int] | None:
     """Return (message_id, phone, body, sender, timestamp) or None if invalid."""
     if not isinstance(data, dict):
         return None
@@ -83,7 +83,9 @@ class WhatsAppWebhookView(APIView):
         parsed = normalize_payload(request.data)
         if parsed is None:
             return Response(
-                {"detail": "صيغة غير صحيحة. message_id و phone_number و message_body مطلوبة."},
+                {
+                    "detail": "صيغة غير صحيحة. message_id و phone_number و message_body مطلوبة."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         message_id, phone, body, sender, timestamp = parsed

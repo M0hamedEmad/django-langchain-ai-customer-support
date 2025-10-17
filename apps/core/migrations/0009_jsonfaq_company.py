@@ -5,16 +5,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0008_jsonfaq_alter_message_unique_together'),
+        ("core", "0008_jsonfaq_alter_message_unique_together"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='jsonfaq',
-            name='company',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='json_fq', to='core.company'),
+            model_name="jsonfaq",
+            name="company",
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="json_fq",
+                to="core.company",
+            ),
             preserve_default=False,
         ),
     ]

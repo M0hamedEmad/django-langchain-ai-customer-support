@@ -16,7 +16,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from functools import partial
-from typing import Any, Dict, Optional
+from typing import Any
 
 from django.conf import settings
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -144,10 +144,10 @@ def build_graph(*, company, deps):
 def handle_message(
     message: str,
     session_id: str,
-    customer_id: Optional[str] = None,
+    customer_id: str | None = None,
     company=None,
-    init_state: Optional[ConversationState] = None,
-) -> Dict[str, Any]:
+    init_state: ConversationState | None = None,
+) -> dict[str, Any]:
     """Run one message through the graph on its company+session thread."""
     try:
         deps = get_deps(company)

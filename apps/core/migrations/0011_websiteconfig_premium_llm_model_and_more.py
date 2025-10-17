@@ -4,30 +4,66 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0010_websiteconfig'),
+        ("core", "0010_websiteconfig"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='websiteconfig',
-            name='premium_llm_model',
-            field=models.CharField(blank=True, choices=[('gpt-4o-mini', 'gpt-4o-mini'), ('gemini-2.5-flash', 'gemini-2.5-flash'), ('gemini-2.5-pro', 'gemini-2.5-pro'), ('deepseek/deepseek-chat-v3.1:free', 'deepseek/deepseek-chat-v3.1:free'), ('other', 'other')], max_length=32, null=True),
+            model_name="websiteconfig",
+            name="premium_llm_model",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("gpt-4o-mini", "gpt-4o-mini"),
+                    ("gemini-2.5-flash", "gemini-2.5-flash"),
+                    ("gemini-2.5-pro", "gemini-2.5-pro"),
+                    (
+                        "deepseek/deepseek-chat-v3.1:free",
+                        "deepseek/deepseek-chat-v3.1:free",
+                    ),
+                    ("other", "other"),
+                ],
+                max_length=32,
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='websiteconfig',
-            name='premium_llm_provider',
-            field=models.CharField(blank=True, choices=[('openai', 'openai'), ('gemini', 'gemini'), ('deepseek', 'deepseek')], max_length=32, null=True),
+            model_name="websiteconfig",
+            name="premium_llm_provider",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("openai", "openai"),
+                    ("gemini", "gemini"),
+                    ("deepseek", "deepseek"),
+                ],
+                max_length=32,
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='websiteconfig',
-            name='premium_other',
+            model_name="websiteconfig",
+            name="premium_other",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='websiteconfig',
-            name='llm_model',
-            field=models.CharField(blank=True, choices=[('gpt-4o-mini', 'gpt-4o-mini'), ('gemini-2.5-flash', 'gemini-2.5-flash'), ('gemini-2.5-pro', 'gemini-2.5-pro'), ('deepseek/deepseek-chat-v3.1:free', 'deepseek/deepseek-chat-v3.1:free'), ('other', 'other')], max_length=32, null=True),
+            model_name="websiteconfig",
+            name="llm_model",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("gpt-4o-mini", "gpt-4o-mini"),
+                    ("gemini-2.5-flash", "gemini-2.5-flash"),
+                    ("gemini-2.5-pro", "gemini-2.5-pro"),
+                    (
+                        "deepseek/deepseek-chat-v3.1:free",
+                        "deepseek/deepseek-chat-v3.1:free",
+                    ),
+                    ("other", "other"),
+                ],
+                max_length=32,
+                null=True,
+            ),
         ),
     ]

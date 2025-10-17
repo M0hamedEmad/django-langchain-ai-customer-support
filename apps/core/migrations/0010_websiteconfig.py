@@ -4,19 +4,52 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0009_jsonfaq_company'),
+        ("core", "0009_jsonfaq_company"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='WebSiteConfig',
+            name="WebSiteConfig",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('llm_provider', models.CharField(blank=True, choices=[('openai', 'openai'), ('gemini', 'gemini'), ('deepseek', 'deepseek')], max_length=32, null=True)),
-                ('llm_model', models.CharField(blank=True, choices=[('gpt-4o-mini', 'gpt-4o-mini'), ('gemini-2.5-flash', 'gemini-2.5-flash'), ('gemini-2.5-pro', 'gemini-2.5-pro'), ('deepseek-chat-v3.1:free', 'deepseek-chat-v3.1:free'), ('other', 'other')], max_length=32, null=True)),
-                ('other', models.CharField(blank=True, max_length=255, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "llm_provider",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("openai", "openai"),
+                            ("gemini", "gemini"),
+                            ("deepseek", "deepseek"),
+                        ],
+                        max_length=32,
+                        null=True,
+                    ),
+                ),
+                (
+                    "llm_model",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("gpt-4o-mini", "gpt-4o-mini"),
+                            ("gemini-2.5-flash", "gemini-2.5-flash"),
+                            ("gemini-2.5-pro", "gemini-2.5-pro"),
+                            ("deepseek-chat-v3.1:free", "deepseek-chat-v3.1:free"),
+                            ("other", "other"),
+                        ],
+                        max_length=32,
+                        null=True,
+                    ),
+                ),
+                ("other", models.CharField(blank=True, max_length=255, null=True)),
             ],
         ),
     ]

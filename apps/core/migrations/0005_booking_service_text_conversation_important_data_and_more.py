@@ -5,30 +5,35 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0004_company_common_questions_company_common_services'),
+        ("core", "0004_company_common_questions_company_common_services"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='booking',
-            name='service_text',
+            model_name="booking",
+            name="service_text",
             field=models.CharField(blank=True, max_length=555, null=True),
         ),
         migrations.AddField(
-            model_name='conversation',
-            name='important_data',
+            model_name="conversation",
+            name="important_data",
             field=models.JSONField(blank=True, default=dict),
         ),
         migrations.AlterField(
-            model_name='booking',
-            name='notes',
+            model_name="booking",
+            name="notes",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='booking',
-            name='service',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='bookings', to='core.service'),
+            model_name="booking",
+            name="service",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="bookings",
+                to="core.service",
+            ),
         ),
     ]

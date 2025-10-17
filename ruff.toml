@@ -1,0 +1,9 @@
+# Keep it tight: pyflakes, pycodestyle errors, import order, pyupgrade.
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[lint.isort]
+known-first-party = ["apps", "config", "tests"]

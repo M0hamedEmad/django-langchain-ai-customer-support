@@ -4,22 +4,29 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0007_alter_message_dedup_hash'),
+        ("core", "0007_alter_message_dedup_hash"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='JSONFAQ',
+            name="JSONFAQ",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(blank=True, max_length=100, null=True)),
-                ('data', models.JSONField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(blank=True, max_length=100, null=True)),
+                ("data", models.JSONField()),
             ],
         ),
         migrations.AlterUniqueTogether(
-            name='message',
+            name="message",
             unique_together=set(),
         ),
     ]

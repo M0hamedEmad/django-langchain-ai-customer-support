@@ -1,12 +1,10 @@
+import os
 from typing import Any
 
 from django.conf import settings
-import os
-
-
 from langchain_community.vectorstores import Chroma
-from langchain_openai import OpenAIEmbeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 from apps.core.models import Company
 
@@ -15,11 +13,16 @@ def collection_name(company: Company) -> str:
     return f"company_{company.id}"
 
 
-
 def get_embeddings() -> Any:
-    provider = (getattr(settings, "LLM_PROVIDER", os.getenv("LLM_PROVIDER", "gemini")) or "gemini").lower()
+    provider = (
+        getattr(settings, "LLM_PROVIDER", os.getenv("LLM_PROVIDER", "gemini"))
+        or "gemini"
+    ).lower()
 
-    if provider in ("gemini", "google", "google-genai", "deepseek") and GoogleGenerativeAIEmbeddings is not None:
+    if (
+        provider in ("gemini", "google", "google-genai", "deepseek")
+        and GoogleGenerativeAIEmbeddings is not None
+    ):
         # Prefer configurable embeddings model; default to text-embedding-004
         model_name = os.getenv("GOOGLE_EMBEDDINGS_MODEL", "models/gemini-embedding-001")
         if not os.getenv("GOOGLE_API_KEY"):

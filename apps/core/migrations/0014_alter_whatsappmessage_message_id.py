@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0013_whatsappmessage'),
+        ("core", "0013_whatsappmessage"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='whatsappmessage',
-            name='message_id',
+            model_name="whatsappmessage",
+            name="message_id",
             field=models.CharField(db_index=True, max_length=255, unique=True),
         ),
     ]

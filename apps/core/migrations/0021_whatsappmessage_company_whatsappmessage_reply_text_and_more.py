@@ -5,24 +5,33 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0020_vectorsyncjob'),
+        ("core", "0020_vectorsyncjob"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='whatsappmessage',
-            name='company',
-            field=models.ForeignKey(blank=True, help_text='Set by the webhook; legacy polled rows predate it.', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='whatsapp_messages', to='core.company'),
+            model_name="whatsappmessage",
+            name="company",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Set by the webhook; legacy polled rows predate it.",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="whatsapp_messages",
+                to="core.company",
+            ),
         ),
         migrations.AddField(
-            model_name='whatsappmessage',
-            name='reply_text',
+            model_name="whatsappmessage",
+            name="reply_text",
             field=models.TextField(blank=True),
         ),
         migrations.AddIndex(
-            model_name='whatsappmessage',
-            index=models.Index(fields=['is_processed', 'received_at'], name='core_whatsa_is_proc_d9190c_idx'),
+            model_name="whatsappmessage",
+            index=models.Index(
+                fields=["is_processed", "received_at"],
+                name="core_whatsa_is_proc_d9190c_idx",
+            ),
         ),
     ]

@@ -34,7 +34,10 @@ def enqueue_vector_sync(company, kind: str, ref_id: int, op: str = "upsert"):
             return job
     except Exception:
         logger.warning(
-            "VectorSync enqueue failed for %s/%s ref=%s", kind, op, ref_id,
+            "VectorSync enqueue failed for %s/%s ref=%s",
+            kind,
+            op,
+            ref_id,
             exc_info=True,
         )
         return None
@@ -80,17 +83,19 @@ def _json_faq_docs(faq) -> list:
     items = [o for o in (items or []) if isinstance(o, dict)]
     docs = []
     for idx, obj in enumerate(items):
-        docs.append({
-            "id": f"json:{faq.pk}:{idx}",
-            "question": obj.get("question") or "",
-            "answer": obj.get("answer") or "",
-            "informal_answer": obj.get("informal_answer", ""),
-            "category": obj.get("category", ""),
-            "tags": obj.get("tags", ""),
-            "example_dialogue": obj.get("example_dialogue", ""),
-            "rag_tips": obj.get("rag_tips", ""),
-            "json_faq_id": str(faq.pk),
-        })
+        docs.append(
+            {
+                "id": f"json:{faq.pk}:{idx}",
+                "question": obj.get("question") or "",
+                "answer": obj.get("answer") or "",
+                "informal_answer": obj.get("informal_answer", ""),
+                "category": obj.get("category", ""),
+                "tags": obj.get("tags", ""),
+                "example_dialogue": obj.get("example_dialogue", ""),
+                "rag_tips": obj.get("rag_tips", ""),
+                "json_faq_id": str(faq.pk),
+            }
+        )
     return docs
 
 
@@ -99,9 +104,9 @@ def process_pending(limit: int | None = None) -> dict:
     from apps.core.models import VectorSyncJob
 
     done = failed = 0
-    qs = VectorSyncJob.objects.filter(
-        status=VectorSyncJob.Status.PENDING
-    ).order_by("created_at", "pk")
+    qs = VectorSyncJob.objects.filter(status=VectorSyncJob.Status.PENDING).order_by(
+        "created_at", "pk"
+    )
     if limit is not None:
         qs = qs[:limit]
     for job in qs:

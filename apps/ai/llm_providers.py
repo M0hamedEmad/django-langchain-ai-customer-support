@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import os
 from typing import Any
 
@@ -41,7 +42,8 @@ def get_chat_model(provider: str | None = None, model_name: str | None = None) -
         return ChatOpenAI(
             api_key=api_key,
             base_url=base_url,
-            model=model_name or os.getenv("DEEPSEEK_MODEL", "deepseek/deepseek-chat-v3.1:free"),
+            model=model_name
+            or os.getenv("DEEPSEEK_MODEL", "deepseek/deepseek-chat-v3.1:free"),
             temperature=0.3,
         )
 

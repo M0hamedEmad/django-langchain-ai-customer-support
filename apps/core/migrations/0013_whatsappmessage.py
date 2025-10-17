@@ -4,26 +4,36 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0012_alter_websiteconfig_options_and_more'),
+        ("core", "0012_alter_websiteconfig_options_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='WhatsAppMessage',
+            name="WhatsAppMessage",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('message_id', models.CharField(max_length=255, unique=True)),
-                ('phone_number', models.CharField(max_length=20)),
-                ('sender_name', models.CharField(blank=True, max_length=255, null=True)),
-                ('message_body', models.TextField()),
-                ('timestamp', models.BigIntegerField()),
-                ('received_at', models.DateTimeField(auto_now_add=True)),
-                ('is_processed', models.BooleanField(default=False)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("message_id", models.CharField(max_length=255, unique=True)),
+                ("phone_number", models.CharField(max_length=20)),
+                (
+                    "sender_name",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("message_body", models.TextField()),
+                ("timestamp", models.BigIntegerField()),
+                ("received_at", models.DateTimeField(auto_now_add=True)),
+                ("is_processed", models.BooleanField(default=False)),
             ],
             options={
-                'ordering': ['-timestamp'],
+                "ordering": ["-timestamp"],
             },
         ),
     ]

@@ -12,11 +12,9 @@ write wins and both results are equivalent.
 
 from __future__ import annotations
 
-from typing import Dict, Optional
-
 from apps.ai.services.deps import ChatbotDeps, build_deps
 
-_cache: Dict[object, ChatbotDeps] = {}
+_cache: dict[object, ChatbotDeps] = {}
 
 
 def _key(company) -> object:
@@ -33,7 +31,7 @@ def get_deps(company) -> ChatbotDeps:
     return deps
 
 
-def invalidate_company(company_id: Optional[int]) -> None:
+def invalidate_company(company_id: int | None) -> None:
     _cache.pop(company_id, None)
 
 

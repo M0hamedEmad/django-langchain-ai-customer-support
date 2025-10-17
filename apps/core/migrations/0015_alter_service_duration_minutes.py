@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0014_alter_whatsappmessage_message_id'),
+        ("core", "0014_alter_whatsappmessage_message_id"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='service',
-            name='duration_minutes',
-            field=models.PositiveIntegerField(blank=True, null=True, verbose_name='Duration'),
+            model_name="service",
+            name="duration_minutes",
+            field=models.PositiveIntegerField(
+                blank=True, null=True, verbose_name="Duration"
+            ),
         ),
     ]

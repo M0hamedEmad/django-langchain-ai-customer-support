@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Optional
 
 from apps.core.models import Booking, Customer, Service
 
@@ -41,9 +40,9 @@ def resolve_customer(state) -> Customer | None:
 def fetch_user_bookings(company, customer) -> list:
     """Fetch all bookings for a user as plain dicts (empty list on failure)."""
     try:
-        bookings = Booking.objects.filter(
-            customer=customer, company=company
-        ).order_by("-created_at")
+        bookings = Booking.objects.filter(customer=customer, company=company).order_by(
+            "-created_at"
+        )
 
         if not bookings.exists():
             return []
@@ -64,8 +63,7 @@ def fetch_user_bookings(company, customer) -> list:
                     "notes": booking.notes,
                     "source": booking.source,
                     "created_at": booking.created_at,
-                    "is_cancellable": booking.status
-                    not in ["completed", "cancelled"],
+                    "is_cancellable": booking.status not in ["completed", "cancelled"],
                 }
             )
 
@@ -95,9 +93,7 @@ def match_service(*, company, deps, state) -> Service | None:
                 selected_service or last_message, names, scorer=fuzz.partial_ratio
             )
             if best and best[1] >= 70:
-                matched = Service.objects.filter(
-                    company=company, name=best[0]
-                ).first()
+                matched = Service.objects.filter(company=company, name=best[0]).first()
                 if matched is not None:
                     if not selected_service:
                         state["selected_service"] = matched.name

@@ -11,8 +11,6 @@ never existed.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
@@ -23,9 +21,7 @@ from apps.core.models import Booking
 def get_booking_details(*, company, customer, booking_id: int) -> dict:
     """Booking details for one user-owned booking."""
     try:
-        booking = Booking.objects.get(
-            id=booking_id, customer=customer, company=company
-        )
+        booking = Booking.objects.get(id=booking_id, customer=customer, company=company)
 
         return {
             "success": True,
@@ -39,8 +35,7 @@ def get_booking_details(*, company, customer, booking_id: int) -> dict:
                 "notes": booking.notes,
                 "source": booking.source,
                 "created_at": booking.created_at,
-                "is_editable": booking.status
-                in ["created", "confirmed", "cancelled"],
+                "is_editable": booking.status in ["created", "confirmed", "cancelled"],
                 "is_cancellable": booking.status not in ["completed", "cancelled"],
             },
         }
@@ -53,7 +48,7 @@ def get_booking_details(*, company, customer, booking_id: int) -> dict:
 
 
 def cancel_booking(
-    *, company, customer, booking_id: int, reason: Optional[str] = None
+    *, company, customer, booking_id: int, reason: str | None = None
 ) -> dict:
     """Cancel one non-completed booking."""
     try:
@@ -135,9 +130,9 @@ def edit_booking(
     company,
     customer,
     booking_id: int,
-    date: Optional[str] = None,
-    notes: Optional[str] = None,
-    service: Optional[str] = None,
+    date: str | None = None,
+    notes: str | None = None,
+    service: str | None = None,
 ) -> dict:
     """Edit one booking after confirmation; only editable fields change."""
     try:
