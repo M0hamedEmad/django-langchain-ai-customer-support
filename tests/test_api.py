@@ -146,3 +146,64 @@ def test_anonymous_throttle(db, monkeypatch):
     codes = [client.get("/api/v1/healthz").status_code for _ in range(5)]
     assert codes[:3] == [200, 200, 200]
     assert codes[3] == 429
+
+
+def test_webhook_ignores_own_echoes(api_key):
+    from apps.core.models import WhatsAppMessage
+
+    raw_echo = {
+        "key": {"id": "own1", "remoteJid": "20100", "fromMe": True},
+        "content": {"conversation": "our reply"},
+        "messageTimestamp": 1,
+    }
+    response = client.post(
+        "/api/v1/integrations/whatsapp/webhook",
+        data=raw_echo,
+        content_type="application/json",
+        **api_key,
+    )
+    assert response.json() == {"status": "ignored"}
+    assert WhatsAppMessage.objects.filter(message_id="own1").count() == 0
+
+
+def test_chat_graceful_string_reply(api_key, company):
+    payload = {
+        "session_id": "s9",
+        "message": "hi",
+        "customer": {"phone": "9000"},
+    }
+    with patch("apps.api.views.handle_chat", return_value="عذراً، busy"):
+        response = client.post(
+            "/api/v1/chat/stream",
+            data=payload,
+            content_type="application/json",
+            **api_key,
+        )
+    assert response.status_code == 200
+    assert response.json() == {"message": "عذراً، busy"}
+
+
+def test_bulk_upsert_accepts_models_and_lists(api_key, company):
+    from apps.core.models import FAQ
+
+    payload = {
+        "faqs": [
+            {
+                "question": "q?",
+                "answer": "a!",
+                "tags": ["x", "y"],
+            }
+        ]
+    }
+    with patch("apps.ingestion.etl.upsert_faqs", return_value={"upserted": 1}):
+        response = client.post(
+            "/api/v1/knowledge/faq/bulk_upsert",
+            data=payload,
+            content_type="application/json",
+            **api_key,
+        )
+    assert response.status_code == 200
+    assert FAQ.objects.filter(company=company).count() == 1
+    with patch("apps.ingestion.etl.upsert_faqs", return_value={"upserted": 1}):
+        reindex = client.post("/api/v1/knowledge/faq/reindex", **api_key)
+    assert reindex.json()["count"] == 1

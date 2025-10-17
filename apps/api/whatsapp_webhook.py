@@ -3,6 +3,8 @@
 AI processing happens asynchronously in the `process_inbox` worker, never in
 the webhook request. Retried gateway deliveries are free: `message_id` is
 unique, so a redelivery returns ``{"status": "duplicate"}`` without new rows.
+Gateway echoes of our own sent messages (`fromMe`) return ``{"status":
+"ignored"}`` — ingesting them would reply to ourselves in a loop.
 
 Accepted payloads (gateway-agnostic):
   simple: {"message_id": ..., "phone_number": ..., "message_body": ...,
@@ -17,6 +19,7 @@ Auth: `X-Company-Key` (401 like the rest of the API). If
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 from typing import Any
@@ -29,6 +32,16 @@ from apps.api.views import _get_company_from_request
 from apps.core.models import WhatsAppMessage
 
 logger = logging.getLogger(__name__)
+
+
+def is_outbound(data: dict) -> bool:
+    """True for gateway echoes of our own sent messages (never ingest these)."""
+    if not isinstance(data, dict):
+        return False
+    if data.get("fromMe") is True:
+        return True
+    key = data.get("key")
+    return isinstance(key, dict) and key.get("fromMe") is True
 
 
 def normalize_payload(data: dict[str, Any]) -> tuple[str, str, str, str, int] | None:
@@ -74,11 +87,15 @@ class WhatsAppWebhookView(APIView):
             provided = request.headers.get("X-Webhook-Secret") or request.META.get(
                 "HTTP_X_WEBHOOK_SECRET", ""
             )
-            if provided != expected:
+            if not hmac.compare_digest(provided, expected):
                 return Response(
                     {"detail": "Invalid webhook secret."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
+
+        if is_outbound(request.data):
+            # Gateway echo of our own reply: acknowledge, store nothing.
+            return Response({"status": "ignored"}, status=status.HTTP_200_OK)
 
         parsed = normalize_payload(request.data)
         if parsed is None:

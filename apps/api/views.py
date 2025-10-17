@@ -128,14 +128,18 @@ class ChatStreamView(APIView):
         result = handle_chat(
             message, session_id, customer.id, company, init_state=state
         )
-        try:
-            final_text: str = result["messages"][-1]["content"]
-        except (KeyError, IndexError, TypeError, AttributeError):
-            logger.exception("Chat pipeline returned no usable reply")
-            return Response(
-                {"detail": "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى لاحقاً."},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+        if isinstance(result, str):
+            # Pipeline-internal graceful degradation (already user-facing Arabic).
+            final_text = result
+        else:
+            try:
+                final_text: str = result["messages"][-1]["content"]
+            except (KeyError, IndexError, TypeError, AttributeError):
+                logger.exception("Chat pipeline returned no usable reply")
+                return Response(
+                    {"detail": "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى لاحقاً."},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
 
         # Idempotent assistant reply: a retried request replays the first answer
         # instead of appending a duplicate. The user message is intentionally

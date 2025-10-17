@@ -8,14 +8,46 @@ from apps.ai.retrieval.chroma_store import collection_name, get_vectorstore
 from apps.core.models import Company
 
 
+def _field(item, key: str, default=""):
+    """Read dict keys and model attributes through one accessor."""
+    if isinstance(item, dict):
+        return item.get(key, default)
+    return getattr(item, key, default)
+
+
+def _as_faq_dict(item, index: int) -> dict:
+    """Accept API dicts and FAQ model instances (bulk/reindex pass models)."""
+
+    def text(key: str) -> str:
+        return str(_field(item, key, "") or "").strip()
+
+    tags = _field(item, "tags", "")
+    if isinstance(tags, (list, tuple)):
+        tags = ",".join(str(t) for t in tags)
+
+    return {
+        "id": _field(item, "id", ""),
+        "question": text("question"),
+        "answer": text("answer"),
+        "informal_answer": text("informal_answer"),
+        "category": _field(item, "category", "") or "",
+        "tags": tags,
+        "example_dialogue": _field(item, "example_dialogue", "") or "",
+        "rag_tips": _field(item, "rag_tips", "") or "",
+        "json_faq_id": str(_field(item, "json_faq_id", "")),
+        "row": index,
+    }
+
+
 def handle_faq_questions(data, company_id):
     docs: list[Document] = []
     ids: list[str] = []
     if isinstance(data, list):
-        for i, item in enumerate(data):
-            q = (item.get("question") or "").strip()
-            a = (item.get("answer") or "").strip()
-            informal_answer = (item.get("informal_answer") or "").strip()
+        for i, raw in enumerate(data):
+            item = _as_faq_dict(raw, i)
+            q = item["question"]
+            a = item["answer"]
+            informal_answer = item["informal_answer"]
 
             content = f"سؤال: {q}\nإجابة: {a}"
             if informal_answer:
@@ -29,18 +61,17 @@ def handle_faq_questions(data, company_id):
                         "answer": a,
                         "source": "faq",
                         "company_id": str(company_id),
-                        "faq_id": str(item.get("id", "")),
-                        "category": item.get("category", ""),
-                        "tags": item.get("tags", ""),
-                        "example_dialogue": item.get("example_dialogue", ""),
-                        "rag_tips": item.get("rag_tips", ""),
+                        "faq_id": str(item["id"]),
+                        "category": item["category"],
+                        "tags": item["tags"],
+                        "example_dialogue": item["example_dialogue"],
+                        "rag_tips": item["rag_tips"],
                         "row": i,
-                        "json_faq_id": str(item.get("json_faq_id", "")),
+                        "json_faq_id": item["json_faq_id"],
                     },
                 )
             )
-            faq_id = item.get("id", "")
-            ids.append(f"faq:{faq_id}")
+            ids.append(f"faq:{item['id']}")
     return docs, ids
 
 

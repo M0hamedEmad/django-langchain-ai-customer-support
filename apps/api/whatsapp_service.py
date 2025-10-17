@@ -57,19 +57,3 @@ class WhatsAppService:
         response = requests.post(url, headers=self.headers, json=data, timeout=timeout)
         response.raise_for_status()
         return response.json()
-
-
-# api = WhatsAppService()
-# # Note: Use phone number WITHOUT the '+' sign
-# chat_id = "201099247834"  # NOT +201234567890
-
-# # Get last 10 received messages
-# messages = api.get_messages(
-#     phone_number=chat_id,
-#     limit=10,
-# )
-
-# for message in messages['data']:
-#     print(f"From: {message.get('key', {}).get('fromMe')}")
-#     print(f"Message: {message.get('content', {}).get('conversation')}")
-#     print("---")

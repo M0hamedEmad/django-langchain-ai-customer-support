@@ -15,6 +15,25 @@ def test_faq_ids_stable():
     assert "سؤال: q?" in docs[0].page_content
 
 
+def test_faq_model_instances_and_list_tags():
+    class FakeFAQ:
+        id = 9
+        question = "q?"
+        answer = "a!"
+        informal_answer = ""
+        category = None
+        tags = ["x", "y"]
+        example_dialogue = ""
+        rag_tips = ""
+        json_faq_id = ""
+
+    docs, ids = handle_faq_questions([FakeFAQ()], 1)
+    assert ids == ["faq:9"]
+    assert docs[0].metadata["tags"] == "x,y"
+    assert docs[0].metadata["category"] == ""
+    assert all(isinstance(v, (str, int)) for v in docs[0].metadata.values())
+
+
 def test_outbox_coalesces_and_processes(db, company):
     jf = JSONFAQ.objects.create(
         company=company, name="j", data=[{"question": "q?", "answer": "a!"}]

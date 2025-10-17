@@ -85,12 +85,16 @@ def process_one(wm: WhatsAppMessage, gateway=None) -> bool:
     result = handle_chat(
         wm.message_body, conv.session_id, customer.id, company, init_state=state
     )
-    try:
-        final_text: str = result["messages"][-1]["content"]
-    except (KeyError, IndexError, TypeError, AttributeError):
-        logger.exception("WhatsApp %s: pipeline produced no reply", wm.message_id)
-        _mark(wm)
-        return False
+    if isinstance(result, str):
+        # Pipeline-internal graceful degradation (already user-facing Arabic).
+        final_text = result
+    else:
+        try:
+            final_text: str = result["messages"][-1]["content"]
+        except (KeyError, IndexError, TypeError, AttributeError):
+            logger.exception("WhatsApp %s: pipeline produced no reply", wm.message_id)
+            _mark(wm)
+            return False
 
     Message.objects.create(
         conversation=conv,
