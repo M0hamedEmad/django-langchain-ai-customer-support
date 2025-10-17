@@ -38,8 +38,8 @@ class MessageAdmin(admin.ModelAdmin):
 
 @admin.register(WhatsAppMessage)
 class WhatsAppMessageAdmin(admin.ModelAdmin):
-    list_display = ("message_id", "phone_number", "sender_name", "message_body", "timestamp", "received_at", "is_processed")
-    list_filter = ("phone_number", "is_processed")
+    list_display = ("message_id", "company", "phone_number", "sender_name", "message_body", "timestamp", "received_at", "is_processed")
+    list_filter = ("company", "is_processed")
 
 @admin.register(EscalationTicket)
 class EscalationTicketAdmin(admin.ModelAdmin):

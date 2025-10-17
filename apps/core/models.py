@@ -305,15 +305,24 @@ class Message(models.Model):
 
 class WhatsAppMessage(models.Model):
     message_id = models.CharField(max_length=255, unique=True, db_index=True)
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="whatsapp_messages",
+        null=True, blank=True,
+        help_text="Set by the webhook; legacy polled rows predate it.",
+    )
     phone_number = models.CharField(max_length=20)
     sender_name = models.CharField(max_length=255, blank=True, null=True)
     message_body = models.TextField()
     timestamp = models.BigIntegerField()
     received_at = models.DateTimeField(auto_now_add=True)
     is_processed = models.BooleanField(default=False)
-    
+    reply_text = models.TextField(blank=True)
+
     class Meta:
         ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=["is_processed", "received_at"]),
+        ]
     
     def __str__(self):
         return f"{self.phone_number}: {self.message_body[:50]}"
