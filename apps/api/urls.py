@@ -1,9 +1,11 @@
 from django.urls import path
 
-from . import views
+from . import health, views
 from . import whatsapp_webhook
 
 urlpatterns = [
+    path("healthz", health.HealthCheckView.as_view(), name="healthz"),
+    path("readyz", health.ReadinessCheckView.as_view(), name="readyz"),
     path("chat/stream", views.ChatStreamView.as_view(), name="chat-stream"),
     path("services", views.ServicesView.as_view(), name="services"),
     path("knowledge/faq/bulk_upsert", views.FAQBulkUpsertView.as_view(), name="faq-bulk-upsert"),
