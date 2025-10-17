@@ -117,7 +117,24 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
     ],
+    # All endpoints are AllowAny, so every caller throttles as anonymous.
+    # 429s on abuse; raise the rate (or scope per view) before load tests.
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.environ.get("DRF_ANON_THROTTLE_RATE", "200/min"),
+    },
 }
+
+# Production transport security: enable behind HTTPS only (all off for local
+# dev). With a TLS-terminating proxy, also set:
+#   SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+#   SECURE_SSL_REDIRECT = True
+#   SECURE_HSTS_SECONDS = 31536000
+#   SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#   SESSION_COOKIE_SECURE = True
+#   CSRF_COOKIE_SECURE = True
 
 # Channels (using in-memory layer for dev)
 CHANNEL_LAYERS = {

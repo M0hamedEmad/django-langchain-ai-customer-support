@@ -132,3 +132,17 @@ def test_readyz_db_down(db):
         response = client.get("/api/v1/readyz")
     assert response.status_code == 503
     assert response.json()["status"] == "not-ready"
+
+
+def test_anonymous_throttle(db, monkeypatch):
+    from django.core.cache import cache
+    from rest_framework.throttling import AnonRateThrottle
+
+    # NOTE: DRF binds THROTTLE_RATES as a class attribute at import, so
+    # override_settings(REST_FRAMEWORK=...) cannot change the rate in-process.
+    # Patch the mapping itself (auto-reverted) to prove the 429 plumbing.
+    cache.clear()  # throttle history is process-global in tests
+    monkeypatch.setitem(AnonRateThrottle.THROTTLE_RATES, "anon", "3/min")
+    codes = [client.get("/api/v1/healthz").status_code for _ in range(5)]
+    assert codes[:3] == [200, 200, 200]
+    assert codes[3] == 429
